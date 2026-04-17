@@ -51,7 +51,7 @@ jobs:
 
       # 第六步：正式构建你的解决方案（请将下方尖括号内的内容替换为你的 .sln 文件名）
       - name: Build solution
-        run: msbuild <YourSolutionName>.sln -p:Configuration=Release -p:Platform="Any CPU" -p:VisualStudioVersion=17.0
+        run: msbuild FunctionBox.sln -p:Configuration=Release -p:Platform="Any CPU" -p:VisualStudioVersion=17.0
 
       # 第七步：将生成好的发布文件夹打包成 ZIP 压缩文件
       - name: Zip publish output
@@ -61,7 +61,7 @@ jobs:
           filename: 'VSTO-Addin-Release.zip'
           # 请将下方的路径替换为你的项目实际输出路径，例如 'YourVstoProject/bin/Release/'
           directory: '.'
-          path: 'bin/Release/'
+          path: 'FunctionBox/bin/Release/'
 
       # 第八步：在 GitHub 上创建一个新的 Release，并把压缩包作为附件传上去
       - name: Create Release and Upload Asset
