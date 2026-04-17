@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -18,68 +18,83 @@ namespace FunctionBox
 
         public static async Task CheckAndUpdateAsync()
         {
-            using (UpdateStatusForm statusForm = new UpdateStatusForm())
+            UpdateStatusForm statusForm = null;
+            try
             {
-                try
+                statusForm = new UpdateStatusForm();
+
+                statusForm.UpdateStatus("正在检查更新...");
+                statusForm.SetIndeterminate(true);
+                statusForm.SafeShow();
+                statusForm.SafeActivate();
+
+                ReleaseInfo release = await GetLatestReleaseAsync();
+                Version localVersion = GetLocalVersion();
+
+                if (release.Version <= localVersion)
                 {
-                    statusForm.UpdateStatus("正在检查更新...");
-                    statusForm.SetIndeterminate(true);
-                    statusForm.Show();
-                    statusForm.Activate();
-
-                    ReleaseInfo release = await GetLatestReleaseAsync();
-                    Version localVersion = GetLocalVersion();
-
-                    if (release.Version <= localVersion)
-                    {
-                        statusForm.Close();
-                        ShowTopMostMessage(
-                            $"当前已是最新版本（{FormatVersion(localVersion)}）。",
-                            "更新提示",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-                        return;
-                    }
-
-                    statusForm.Close();
-                    DialogResult result = ShowTopMostMessage(
-                        $"发现新版本：{release.TagName}\n当前版本：{FormatVersion(localVersion)}\n\n是否现在下载并更新？",
+                    statusForm.SafeHide();
+                    ShowTopMostMessage(
+                        $"当前已是最新版本（{FormatVersion(localVersion)}）。",
                         "更新提示",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Information);
-
-                    if (result != DialogResult.Yes)
-                    {
-                        return;
-                    }
-
-                    statusForm.UpdateStatus("正在下载更新包...");
-                    statusForm.SetIndeterminate(false);
-                    statusForm.UpdateProgress(0, "准备下载...");
-                    statusForm.Show();
-                    statusForm.Activate();
-
-                    string setupPath = await DownloadAndPrepareInstallerAsync(release, statusForm);
-
-                    statusForm.UpdateStatus("更新包准备完成，正在启动安装程序...");
-                    statusForm.SetIndeterminate(true);
-                    statusForm.Close();
-                    ShowTopMostMessage(
-                        "更新包准备完成，点击“确定”后将启动安装程序。\n\n开始安装前请关闭所有 Word 窗口，以便顺利覆盖旧文件。",
-                        "更新准备完成",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
-
-                    Process.Start(setupPath);
+                    return;
                 }
-                catch (Exception ex)
+
+                statusForm.SafeHide();
+                DialogResult result = ShowTopMostMessage(
+                    $"发现新版本：{release.TagName}\n当前版本：{FormatVersion(localVersion)}\n\n是否现在下载并更新？",
+                    "更新提示",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (result != DialogResult.Yes)
                 {
-                    statusForm.Close();
-                    ShowTopMostMessage(
-                        $"检查或执行更新失败：{ex.Message}",
-                        "更新失败",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                statusForm.UpdateStatus("正在下载更新包...");
+                statusForm.SetIndeterminate(false);
+                statusForm.UpdateProgress(0, "准备下载...");
+                statusForm.SafeShow();
+                statusForm.SafeActivate();
+
+                string setupPath = await DownloadAndPrepareInstallerAsync(release, statusForm);
+
+                statusForm.UpdateStatus("更新包准备完成，正在启动安装程序...");
+                statusForm.SetIndeterminate(true);
+                statusForm.SafeHide();
+                
+                ShowTopMostMessage(
+                    "更新包准备完成，点击“确定”后将启动安装程序。\n\n开始安装前请关闭所有 Word 窗口，以便顺利覆盖旧文件。",
+                    "更新准备完成",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                Process.Start(setupPath);
+            }
+            catch (Exception ex)
+            {
+                statusForm?.SafeHide();
+                ShowTopMostMessage(
+                    $"检查或执行更新失败：{ex.Message}",
+                    "更新失败",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (statusForm != null && !statusForm.IsDisposed)
+                {
+                    if (statusForm.InvokeRequired)
+                    {
+                        statusForm.Invoke(new Action(statusForm.Dispose));
+                    }
+                    else
+                    {
+                        statusForm.Dispose();
+                    }
                 }
             }
         }
@@ -338,11 +353,21 @@ namespace FunctionBox
 
             public void UpdateStatus(string message)
             {
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action<string>(UpdateStatus), message);
+                    return;
+                }
                 statusLabel.Text = message;
                 statusLabel.Refresh();
             }
             public void SetIndeterminate(bool isIndeterminate)
             {
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action<bool>(SetIndeterminate), isIndeterminate);
+                    return;
+                }
                 progressBar.Style = isIndeterminate ? ProgressBarStyle.Marquee : ProgressBarStyle.Continuous;
                 progressBar.MarqueeAnimationSpeed = isIndeterminate ? 30 : 0;
                 if (!isIndeterminate)
@@ -352,6 +377,11 @@ namespace FunctionBox
             }
             public void UpdateProgress(int percentage, string message)
             {
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action<int, string>(UpdateProgress), percentage, message);
+                    return;
+                }
                 statusLabel.Text = message;
                 if (progressBar.Style != ProgressBarStyle.Continuous)
                 {
@@ -362,6 +392,24 @@ namespace FunctionBox
                 progressBar.Value = Math.Max(0, Math.Min(100, percentage));
                 statusLabel.Refresh();
                 progressBar.Refresh();
+            }
+
+            public void SafeShow()
+            {
+                if (this.InvokeRequired) { this.Invoke(new Action(SafeShow)); return; }
+                this.Show();
+            }
+
+            public void SafeHide()
+            {
+                if (this.InvokeRequired) { this.Invoke(new Action(SafeHide)); return; }
+                this.Hide();
+            }
+
+            public void SafeActivate()
+            {
+                if (this.InvokeRequired) { this.Invoke(new Action(SafeActivate)); return; }
+                this.Activate();
             }
         }
     }

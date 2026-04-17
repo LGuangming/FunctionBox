@@ -53,18 +53,21 @@ namespace FunctionBox
             this.groupBox1.Controls.Add(this.btnBoxEdit);
             this.groupBox1.Controls.Add(this.btnBoxDelete);
             this.groupBox1.Controls.Add(this.btnBoxAdd);
-            this.groupBox1.Location = new System.Drawing.Point(644, 44);
+            this.groupBox1.Location = new System.Drawing.Point(483, 35);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(134, 183);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.groupBox1.Size = new System.Drawing.Size(100, 146);
             this.groupBox1.TabIndex = 1;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "功能";
             // 
             // btnBoxEdit
             // 
-            this.btnBoxEdit.Location = new System.Drawing.Point(6, 74);
+            this.btnBoxEdit.Location = new System.Drawing.Point(4, 59);
+            this.btnBoxEdit.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnBoxEdit.Name = "btnBoxEdit";
-            this.btnBoxEdit.Size = new System.Drawing.Size(122, 44);
+            this.btnBoxEdit.Size = new System.Drawing.Size(92, 35);
             this.btnBoxEdit.TabIndex = 2;
             this.btnBoxEdit.Text = "编辑";
             this.btnBoxEdit.UseVisualStyleBackColor = true;
@@ -72,9 +75,10 @@ namespace FunctionBox
             // 
             // btnBoxDelete
             // 
-            this.btnBoxDelete.Location = new System.Drawing.Point(6, 124);
+            this.btnBoxDelete.Location = new System.Drawing.Point(4, 99);
+            this.btnBoxDelete.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnBoxDelete.Name = "btnBoxDelete";
-            this.btnBoxDelete.Size = new System.Drawing.Size(122, 44);
+            this.btnBoxDelete.Size = new System.Drawing.Size(92, 35);
             this.btnBoxDelete.TabIndex = 1;
             this.btnBoxDelete.Text = "删除";
             this.btnBoxDelete.UseVisualStyleBackColor = true;
@@ -82,9 +86,10 @@ namespace FunctionBox
             // 
             // btnBoxAdd
             // 
-            this.btnBoxAdd.Location = new System.Drawing.Point(6, 24);
+            this.btnBoxAdd.Location = new System.Drawing.Point(4, 19);
+            this.btnBoxAdd.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnBoxAdd.Name = "btnBoxAdd";
-            this.btnBoxAdd.Size = new System.Drawing.Size(122, 44);
+            this.btnBoxAdd.Size = new System.Drawing.Size(92, 35);
             this.btnBoxAdd.TabIndex = 0;
             this.btnBoxAdd.Text = "新建";
             this.btnBoxAdd.UseVisualStyleBackColor = true;
@@ -92,9 +97,10 @@ namespace FunctionBox
             // 
             // SearchTextBox
             // 
-            this.SearchTextBox.Location = new System.Drawing.Point(58, 14);
+            this.SearchTextBox.Location = new System.Drawing.Point(44, 11);
+            this.SearchTextBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.SearchTextBox.Name = "SearchTextBox";
-            this.SearchTextBox.Size = new System.Drawing.Size(336, 25);
+            this.SearchTextBox.Size = new System.Drawing.Size(253, 21);
             this.SearchTextBox.TabIndex = 2;
             this.SearchTextBox.Tag = "";
             this.SearchTextBox.Text = "在此输入名称，进行模糊查找";
@@ -106,18 +112,21 @@ namespace FunctionBox
             // 
             this.groupBox2.Controls.Add(this.btnExport);
             this.groupBox2.Controls.Add(this.btnImport);
-            this.groupBox2.Location = new System.Drawing.Point(644, 251);
+            this.groupBox2.Location = new System.Drawing.Point(483, 257);
+            this.groupBox2.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(134, 123);
+            this.groupBox2.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.groupBox2.Size = new System.Drawing.Size(100, 98);
             this.groupBox2.TabIndex = 4;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "备份/还原";
             // 
             // btnExport
             // 
-            this.btnExport.Location = new System.Drawing.Point(6, 71);
+            this.btnExport.Location = new System.Drawing.Point(4, 57);
+            this.btnExport.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnExport.Name = "btnExport";
-            this.btnExport.Size = new System.Drawing.Size(122, 44);
+            this.btnExport.Size = new System.Drawing.Size(92, 35);
             this.btnExport.TabIndex = 4;
             this.btnExport.Text = "导出VBA清单";
             this.btnExport.UseVisualStyleBackColor = true;
@@ -125,9 +134,10 @@ namespace FunctionBox
             // 
             // btnImport
             // 
-            this.btnImport.Location = new System.Drawing.Point(6, 20);
+            this.btnImport.Location = new System.Drawing.Point(4, 16);
+            this.btnImport.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnImport.Name = "btnImport";
-            this.btnImport.Size = new System.Drawing.Size(122, 44);
+            this.btnImport.Size = new System.Drawing.Size(92, 35);
             this.btnImport.TabIndex = 3;
             this.btnImport.Text = "导入VBA清单";
             this.btnImport.UseVisualStyleBackColor = true;
@@ -147,10 +157,11 @@ namespace FunctionBox
             this.lstVbaCodes.GridLines = true;
             this.lstVbaCodes.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.lstVbaCodes.HideSelection = false;
-            this.lstVbaCodes.Location = new System.Drawing.Point(12, 50);
+            this.lstVbaCodes.Location = new System.Drawing.Point(9, 40);
+            this.lstVbaCodes.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.lstVbaCodes.MultiSelect = false;
             this.lstVbaCodes.Name = "lstVbaCodes";
-            this.lstVbaCodes.Size = new System.Drawing.Size(625, 391);
+            this.lstVbaCodes.Size = new System.Drawing.Size(470, 314);
             this.lstVbaCodes.TabIndex = 5;
             this.lstVbaCodes.UseCompatibleStateImageBehavior = false;
             this.lstVbaCodes.View = System.Windows.Forms.View.Details;
@@ -175,17 +186,18 @@ namespace FunctionBox
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(15, 18);
+            this.label1.Location = new System.Drawing.Point(11, 14);
+            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(45, 15);
+            this.label1.Size = new System.Drawing.Size(35, 12);
             this.label1.TabIndex = 6;
             this.label1.Text = "搜索:";
             // 
             // VbaManagerForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(782, 453);
+            this.ClientSize = new System.Drawing.Size(586, 362);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.SearchTextBox);
@@ -193,6 +205,7 @@ namespace FunctionBox
             this.Controls.Add(this.lstVbaCodes);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.MaximizeBox = false;
             this.Name = "VbaManagerForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -41,24 +41,36 @@ namespace FunctionBox
             this.tabCodePage = new System.Windows.Forms.TabPage();
             this.CodeEditTextBox = new System.Windows.Forms.TextBox();
             this.tabHelpPage = new System.Windows.Forms.TabPage();
+            this.HelpBoxLabel = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.RemarkTextBox = new System.Windows.Forms.TextBox();
-            this.HelpBoxLabel = new System.Windows.Forms.Label();
             this.ShortcutLabel = new System.Windows.Forms.Label();
             this.ShortcutTextBox = new System.Windows.Forms.TextBox();
             this.ShortcutHintLabel = new System.Windows.Forms.Label();
             HelpBoxTab = new System.Windows.Forms.PictureBox();
+            ((System.ComponentModel.ISupportInitialize)(HelpBoxTab)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabCodePage.SuspendLayout();
             this.tabHelpPage.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(HelpBoxTab)).BeginInit();
             this.SuspendLayout();
+            // 
+            // HelpBoxTab
+            // 
+            HelpBoxTab.Image = global::FunctionBox.Properties.Resources.帮助_问号;
+            HelpBoxTab.InitialImage = global::FunctionBox.Properties.Resources.帮助_问号;
+            HelpBoxTab.Location = new System.Drawing.Point(171, 92);
+            HelpBoxTab.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            HelpBoxTab.Name = "HelpBoxTab";
+            HelpBoxTab.Size = new System.Drawing.Size(90, 84);
+            HelpBoxTab.TabIndex = 0;
+            HelpBoxTab.TabStop = false;
             // 
             // CodeNameTextBox
             // 
-            this.CodeNameTextBox.Location = new System.Drawing.Point(86, 24);
+            this.CodeNameTextBox.Location = new System.Drawing.Point(69, 19);
+            this.CodeNameTextBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.CodeNameTextBox.Name = "CodeNameTextBox";
-            this.CodeNameTextBox.Size = new System.Drawing.Size(208, 25);
+            this.CodeNameTextBox.Size = new System.Drawing.Size(167, 21);
             this.CodeNameTextBox.TabIndex = 0;
             // 
             // AddCodeConfirm
@@ -66,9 +78,10 @@ namespace FunctionBox
             this.AddCodeConfirm.DialogResult = System.Windows.Forms.DialogResult.OK;
             this.AddCodeConfirm.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.AddCodeConfirm.Font = new System.Drawing.Font("宋体", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.AddCodeConfirm.Location = new System.Drawing.Point(506, 514);
+            this.AddCodeConfirm.Location = new System.Drawing.Point(405, 411);
+            this.AddCodeConfirm.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.AddCodeConfirm.Name = "AddCodeConfirm";
-            this.AddCodeConfirm.Size = new System.Drawing.Size(107, 36);
+            this.AddCodeConfirm.Size = new System.Drawing.Size(86, 29);
             this.AddCodeConfirm.TabIndex = 5;
             this.AddCodeConfirm.Text = "确定";
             this.AddCodeConfirm.UseVisualStyleBackColor = true;
@@ -77,38 +90,42 @@ namespace FunctionBox
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 29);
+            this.label1.Location = new System.Drawing.Point(10, 23);
+            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(75, 15);
+            this.label1.Size = new System.Drawing.Size(59, 12);
             this.label1.TabIndex = 3;
             this.label1.Text = "代码名称:";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(38, 63);
+            this.label2.Location = new System.Drawing.Point(30, 50);
+            this.label2.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(0, 15);
+            this.label2.Size = new System.Drawing.Size(0, 12);
             this.label2.TabIndex = 4;
             // 
             // tabControl1
             // 
             this.tabControl1.Controls.Add(this.tabCodePage);
             this.tabControl1.Controls.Add(this.tabHelpPage);
-            this.tabControl1.Location = new System.Drawing.Point(15, 96);
+            this.tabControl1.Location = new System.Drawing.Point(12, 77);
+            this.tabControl1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(600, 410);
+            this.tabControl1.Size = new System.Drawing.Size(480, 328);
             this.tabControl1.SizeMode = System.Windows.Forms.TabSizeMode.FillToRight;
             this.tabControl1.TabIndex = 6;
             // 
             // tabCodePage
             // 
             this.tabCodePage.Controls.Add(this.CodeEditTextBox);
-            this.tabCodePage.Location = new System.Drawing.Point(4, 25);
+            this.tabCodePage.Location = new System.Drawing.Point(4, 22);
+            this.tabCodePage.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.tabCodePage.Name = "tabCodePage";
-            this.tabCodePage.Padding = new System.Windows.Forms.Padding(3, 3, 3, 0);
-            this.tabCodePage.Size = new System.Drawing.Size(592, 411);
+            this.tabCodePage.Padding = new System.Windows.Forms.Padding(2, 2, 2, 0);
+            this.tabCodePage.Size = new System.Drawing.Size(472, 302);
             this.tabCodePage.TabIndex = 0;
             this.tabCodePage.Text = "代码";
             // 
@@ -117,12 +134,13 @@ namespace FunctionBox
             this.CodeEditTextBox.AcceptsReturn = true;
             this.CodeEditTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.CodeEditTextBox.Font = new System.Drawing.Font("Consolas", 9F);
-            this.CodeEditTextBox.Location = new System.Drawing.Point(3, 3);
+            this.CodeEditTextBox.Location = new System.Drawing.Point(2, 2);
+            this.CodeEditTextBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.CodeEditTextBox.MaxLength = 3276777;
             this.CodeEditTextBox.Multiline = true;
             this.CodeEditTextBox.Name = "CodeEditTextBox";
             this.CodeEditTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.CodeEditTextBox.Size = new System.Drawing.Size(586, 408);
+            this.CodeEditTextBox.Size = new System.Drawing.Size(468, 300);
             this.CodeEditTextBox.TabIndex = 0;
             this.CodeEditTextBox.WordWrap = false;
             this.CodeEditTextBox.TextChanged += new System.EventHandler(this.CodeEditTextBox_TextChanged);
@@ -131,45 +149,61 @@ namespace FunctionBox
             // 
             this.tabHelpPage.Controls.Add(this.HelpBoxLabel);
             this.tabHelpPage.Controls.Add(HelpBoxTab);
-            this.tabHelpPage.Location = new System.Drawing.Point(4, 25);
+            this.tabHelpPage.Location = new System.Drawing.Point(4, 22);
+            this.tabHelpPage.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.tabHelpPage.Name = "tabHelpPage";
-            this.tabHelpPage.Padding = new System.Windows.Forms.Padding(3);
-            this.tabHelpPage.Size = new System.Drawing.Size(592, 411);
+            this.tabHelpPage.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.tabHelpPage.Size = new System.Drawing.Size(472, 302);
             this.tabHelpPage.TabIndex = 1;
             this.tabHelpPage.Text = "帮助";
             this.tabHelpPage.ToolTipText = "帮不了一点";
             this.tabHelpPage.UseVisualStyleBackColor = true;
             // 
+            // HelpBoxLabel
+            // 
+            this.HelpBoxLabel.AutoSize = true;
+            this.HelpBoxLabel.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.HelpBoxLabel.Location = new System.Drawing.Point(171, 186);
+            this.HelpBoxLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.HelpBoxLabel.Name = "HelpBoxLabel";
+            this.HelpBoxLabel.Size = new System.Drawing.Size(87, 16);
+            this.HelpBoxLabel.TabIndex = 1;
+            this.HelpBoxLabel.Text = "帮不了一点";
+            // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(300, 31);
+            this.label3.Location = new System.Drawing.Point(240, 25);
+            this.label3.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(45, 15);
+            this.label3.Size = new System.Drawing.Size(35, 12);
             this.label3.TabIndex = 8;
             this.label3.Text = "备注:";
             // 
             // RemarkTextBox
             // 
-            this.RemarkTextBox.Location = new System.Drawing.Point(346, 26);
+            this.RemarkTextBox.Location = new System.Drawing.Point(277, 21);
+            this.RemarkTextBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.RemarkTextBox.Name = "RemarkTextBox";
-            this.RemarkTextBox.Size = new System.Drawing.Size(223, 25);
+            this.RemarkTextBox.Size = new System.Drawing.Size(179, 21);
             this.RemarkTextBox.TabIndex = 1;
             // 
             // ShortcutLabel
             // 
             this.ShortcutLabel.AutoSize = true;
-            this.ShortcutLabel.Location = new System.Drawing.Point(12, 66);
+            this.ShortcutLabel.Location = new System.Drawing.Point(10, 53);
+            this.ShortcutLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.ShortcutLabel.Name = "ShortcutLabel";
-            this.ShortcutLabel.Size = new System.Drawing.Size(67, 15);
+            this.ShortcutLabel.Size = new System.Drawing.Size(53, 12);
             this.ShortcutLabel.TabIndex = 9;
             this.ShortcutLabel.Text = "快捷键：";
             // 
             // ShortcutTextBox
             // 
-            this.ShortcutTextBox.Location = new System.Drawing.Point(86, 60);
+            this.ShortcutTextBox.Location = new System.Drawing.Point(69, 48);
+            this.ShortcutTextBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.ShortcutTextBox.Name = "ShortcutTextBox";
-            this.ShortcutTextBox.Size = new System.Drawing.Size(208, 25);
+            this.ShortcutTextBox.Size = new System.Drawing.Size(167, 21);
             this.ShortcutTextBox.TabIndex = 2;
             this.ShortcutTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.ShortcutTextBox_KeyDown);
             // 
@@ -177,38 +211,19 @@ namespace FunctionBox
             // 
             this.ShortcutHintLabel.AutoSize = true;
             this.ShortcutHintLabel.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.ShortcutHintLabel.Location = new System.Drawing.Point(303, 66);
+            this.ShortcutHintLabel.Location = new System.Drawing.Point(242, 53);
+            this.ShortcutHintLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.ShortcutHintLabel.Name = "ShortcutHintLabel";
-            this.ShortcutHintLabel.Size = new System.Drawing.Size(187, 15);
+            this.ShortcutHintLabel.Size = new System.Drawing.Size(113, 12);
             this.ShortcutHintLabel.TabIndex = 11;
-            this.ShortcutHintLabel.Text = "按下快捷键设置";
-            // 
-            // HelpBoxTab
-            // 
-            HelpBoxTab.Image = global::FunctionBox.Properties.Resources.帮助_问号;
-            HelpBoxTab.InitialImage = global::FunctionBox.Properties.Resources.帮助_问号;
-            HelpBoxTab.Location = new System.Drawing.Point(214, 115);
-            HelpBoxTab.Name = "HelpBoxTab";
-            HelpBoxTab.Size = new System.Drawing.Size(112, 105);
-            HelpBoxTab.TabIndex = 0;
-            HelpBoxTab.TabStop = false;
-            // 
-            // HelpBoxLabel
-            // 
-            this.HelpBoxLabel.AutoSize = true;
-            this.HelpBoxLabel.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.HelpBoxLabel.Location = new System.Drawing.Point(214, 232);
-            this.HelpBoxLabel.Name = "HelpBoxLabel";
-            this.HelpBoxLabel.Size = new System.Drawing.Size(109, 20);
-            this.HelpBoxLabel.TabIndex = 1;
-            this.HelpBoxLabel.Text = "帮不了一点";
+            this.ShortcutHintLabel.Text = "按下键盘设置快捷键";
             // 
             // addCodeForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(632, 560);
+            this.ClientSize = new System.Drawing.Size(506, 448);
             this.Controls.Add(this.ShortcutHintLabel);
             this.Controls.Add(this.ShortcutTextBox);
             this.Controls.Add(this.ShortcutLabel);
@@ -222,16 +237,17 @@ namespace FunctionBox
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.HelpButton = true;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.MaximizeBox = false;
             this.Name = "addCodeForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "添加代码";
+            ((System.ComponentModel.ISupportInitialize)(HelpBoxTab)).EndInit();
             this.tabControl1.ResumeLayout(false);
             this.tabCodePage.ResumeLayout(false);
             this.tabCodePage.PerformLayout();
             this.tabHelpPage.ResumeLayout(false);
             this.tabHelpPage.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(HelpBoxTab)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 

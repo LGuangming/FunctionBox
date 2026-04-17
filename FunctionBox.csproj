@@ -347,7 +347,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(CI_MANIFEST_CERT_THUMBPRINT)' != ''">
     <ManifestCertificateThumbprint>$(CI_MANIFEST_CERT_THUMBPRINT)</ManifestCertificateThumbprint>
-    <ManifestKeyFile></ManifestKeyFile>
+    <ManifestKeyFile>
+    </ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>Resources\FunctionBox.ico</ApplicationIcon>

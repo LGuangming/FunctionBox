@@ -6,13 +6,13 @@ using static FunctionBox.VbaManagerForm;
 
 namespace FunctionBox
 {
-    public partial class Ribbon1
+    public partial class FunctionBoxRibbon
     {
         private VbaManagerForm vbaManagerForm;
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
             vbaManagerForm = new VbaManagerForm(btnToolList, btnExecuteVba);
-            textProcess.Visible = false;
+
             btnCheckSumDebug.Checked = Globals.ThisAddIn.SumCheckDebugModeEnabled;
         }
         private void btnValidateHorizontal_Click(object sender, RibbonControlEventArgs e)
@@ -112,7 +112,7 @@ namespace FunctionBox
 
         private void btnQuestion_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("点我也没用，我也不知道！", "帮助");
+            MessageBox.Show("我也不知道", "帮助");
         }
 
         private async void btnUpdate_Click(object sender, RibbonControlEventArgs e)

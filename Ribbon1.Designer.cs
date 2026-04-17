@@ -1,13 +1,13 @@
 ﻿namespace FunctionBox
 {
-    partial class Ribbon1 : Microsoft.Office.Tools.Ribbon.RibbonBase
+    partial class FunctionBoxRibbon : Microsoft.Office.Tools.Ribbon.RibbonBase
     {
         /// <summary>
         /// 必需的设计器变量。
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        public Ribbon1()
+        public FunctionBoxRibbon()
             : base(Globals.Factory.GetRibbonFactory())
         {
             InitializeComponent();
@@ -34,7 +34,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Ribbon1));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FunctionBoxRibbon));
             this.tab1 = this.Factory.CreateRibbonTab();
             this.核对工具 = this.Factory.CreateRibbonGroup();
             this.btnValidateVerticalTop = this.Factory.CreateRibbonButton();
@@ -43,9 +43,10 @@
             this.btnClearSelectionBackground = this.Factory.CreateRibbonButton();
             this.btnClearDocumentBackground = this.Factory.CreateRibbonButton();
             this.btnCheckSumDebug = this.Factory.CreateRibbonToggleButton();
-            this.textProcess = this.Factory.CreateRibbonGroup();
-            this.btnAddmark = this.Factory.CreateRibbonButton();
-            this.button2 = this.Factory.CreateRibbonButton();
+            this.文字处理 = this.Factory.CreateRibbonGroup();
+            this.btnAddThousand = this.Factory.CreateRibbonButton();
+            this.btnC = this.Factory.CreateRibbonButton();
+            this.bthNegativeFormat = this.Factory.CreateRibbonButton();
             this.收纳箱 = this.Factory.CreateRibbonGroup();
             this.btnToolBox = this.Factory.CreateRibbonButton();
             this.btnToolList = this.Factory.CreateRibbonDropDown();
@@ -55,7 +56,7 @@
             this.btnUpdate = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.核对工具.SuspendLayout();
-            this.textProcess.SuspendLayout();
+            this.文字处理.SuspendLayout();
             this.收纳箱.SuspendLayout();
             this.其他.SuspendLayout();
             this.SuspendLayout();
@@ -63,7 +64,7 @@
             // tab1
             // 
             this.tab1.Groups.Add(this.核对工具);
-            this.tab1.Groups.Add(this.textProcess);
+            this.tab1.Groups.Add(this.文字处理);
             this.tab1.Groups.Add(this.收纳箱);
             this.tab1.Groups.Add(this.其他);
             this.tab1.Label = "便利店";
@@ -128,22 +129,31 @@
             this.btnCheckSumDebug.ScreenTip = "开启后会输出加总检查调试信息";
             this.btnCheckSumDebug.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnCheckSumDebug_Click);
             // 
-            // textProcess
+            // 文字处理
             // 
-            this.textProcess.Items.Add(this.btnAddmark);
-            this.textProcess.Items.Add(this.button2);
-            this.textProcess.Label = "文字处理-施工中";
-            this.textProcess.Name = "textProcess";
+            this.文字处理.Items.Add(this.btnAddThousand);
+            this.文字处理.Items.Add(this.btnC);
+            this.文字处理.Items.Add(this.bthNegativeFormat);
+            this.文字处理.Label = "文字处理";
+            this.文字处理.Name = "文字处理";
             // 
-            // btnAddmark
+            // btnAddThousand
             // 
-            this.btnAddmark.Label = "添加千分符";
-            this.btnAddmark.Name = "btnAddmark";
+            this.btnAddThousand.Description = "添加千分符";
+            this.btnAddThousand.Label = "添加千分符号";
+            this.btnAddThousand.Name = "btnAddThousand";
             // 
-            // button2
+            // btnC
             // 
-            this.button2.Label = "中英括号转换";
-            this.button2.Name = "button2";
+            this.btnC.Label = "中英括号转换";
+            this.btnC.Name = "btnC";
+            // 
+            // bthNegativeFormat
+            // 
+            this.bthNegativeFormat.Description = "负号格式转换";
+            this.bthNegativeFormat.Label = "负号格式转换";
+            this.bthNegativeFormat.Name = "bthNegativeFormat";
+            this.bthNegativeFormat.ScreenTip = "负号及括号互转";
             // 
             // 收纳箱
             // 
@@ -199,9 +209,9 @@
             this.btnUpdate.ShowImage = true;
             this.btnUpdate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnUpdate_Click);
             // 
-            // Ribbon1
+            // FunctionBoxRibbon
             // 
-            this.Name = "Ribbon1";
+            this.Name = "FunctionBoxRibbon";
             this.RibbonType = "Microsoft.Word.Document";
             this.Tabs.Add(this.tab1);
             this.Load += new Microsoft.Office.Tools.Ribbon.RibbonUIEventHandler(this.Ribbon1_Load);
@@ -209,8 +219,8 @@
             this.tab1.PerformLayout();
             this.核对工具.ResumeLayout(false);
             this.核对工具.PerformLayout();
-            this.textProcess.ResumeLayout(false);
-            this.textProcess.PerformLayout();
+            this.文字处理.ResumeLayout(false);
+            this.文字处理.PerformLayout();
             this.收纳箱.ResumeLayout(false);
             this.收纳箱.PerformLayout();
             this.其他.ResumeLayout(false);
@@ -234,11 +244,12 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnUpdate;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup 收纳箱;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnToolBox;
-        internal Microsoft.Office.Tools.Ribbon.RibbonGroup textProcess;
         internal Microsoft.Office.Tools.Ribbon.RibbonDropDown btnToolList;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExecuteVba;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddmark;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton button2;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnC;
+        public Microsoft.Office.Tools.Ribbon.RibbonButton btnAddThousand;
+        public Microsoft.Office.Tools.Ribbon.RibbonButton bthNegativeFormat;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup 文字处理;
     }
 
 

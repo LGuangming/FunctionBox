@@ -15,7 +15,7 @@ namespace FunctionBox
     {
         private RibbonDropDown btnToolList; // 假设 btnToolList 是一个 RibbonDropDown 控件
         private RibbonButton btnExecuteVba;
-        private const string EmptyMacroPlaceholder = "（无VBA代码）";
+        private const string EmptyMacroPlaceholder = "添加VBA代码";
         private string SaveFilePath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "FunctionBox",
