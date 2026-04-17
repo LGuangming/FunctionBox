@@ -3,7 +3,7 @@ name: Build and Release VSTO Add-in
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - 'v*'
   pull_request:
@@ -41,14 +41,31 @@ jobs:
           $bytes = [Convert]::FromBase64String($certBase64)
           [IO.File]::WriteAllBytes("${env:CI_MANIFEST_KEY_FILE}", $bytes)
 
+      - name: Import signing certificate into CurrentUser store
+        shell: pwsh
+        run: |
+          $certPassword = "${{ secrets.CERT_PASSWORD }}"
+          if ([string]::IsNullOrWhiteSpace($certPassword)) {
+            throw "缺少 GitHub Secret: CERT_PASSWORD"
+          }
+
+          $securePassword = ConvertTo-SecureString -String $certPassword -AsPlainText -Force
+          $importedCert = Import-PfxCertificate -FilePath "${env:CI_MANIFEST_KEY_FILE}" -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+
+          if ($null -eq $importedCert) {
+            throw "证书导入失败。"
+          }
+
+          "CI_MANIFEST_CERT_THUMBPRINT=$($importedCert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Restore NuGet packages
         run: nuget restore FunctionBox.sln
 
       - name: Build solution
-        run: msbuild FunctionBox.sln /t:Build /p:Configuration=Release /p:Platform="Any CPU"
+        run: msbuild FunctionBox.sln /t:Build /p:Configuration=Release /p:Platform="Any CPU" /p:ManifestKeyFile= /p:ManifestCertificateThumbprint="${{ env.CI_MANIFEST_CERT_THUMBPRINT }}"
 
       - name: Publish VSTO package
-        run: msbuild FunctionBox.csproj /t:Publish /p:Configuration=Release /p:Platform="Any CPU" /p:PublishDir="${{ env.PUBLISH_DIR }}" /p:PublishUrl="${{ env.PUBLISH_DIR }}"
+        run: msbuild FunctionBox.csproj /t:Publish /p:Configuration=Release /p:Platform="Any CPU" /p:PublishDir="${{ env.PUBLISH_DIR }}" /p:PublishUrl="${{ env.PUBLISH_DIR }}" /p:ManifestKeyFile= /p:ManifestCertificateThumbprint="${{ env.CI_MANIFEST_CERT_THUMBPRINT }}"
 
       - name: Ensure setup.exe exists
         shell: pwsh
@@ -81,6 +98,11 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          $thumbprint = "${env:CI_MANIFEST_CERT_THUMBPRINT}"
+          if (-not [string]::IsNullOrWhiteSpace($thumbprint)) {
+            Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $thumbprint } | Remove-Item -Force
+          }
+
           if (Test-Path "${env:CI_MANIFEST_KEY_FILE}") {
             Remove-Item -LiteralPath "${env:CI_MANIFEST_KEY_FILE}" -Force
           }

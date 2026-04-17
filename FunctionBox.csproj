@@ -337,7 +337,7 @@
   <PropertyGroup>
     <SignManifests>true</SignManifests>
   </PropertyGroup>
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(CI_MANIFEST_CERT_THUMBPRINT)' == ''">
     <ManifestKeyFile>FunctionBox_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(CI_MANIFEST_KEY_FILE)' != ''">
@@ -346,8 +346,12 @@
   <PropertyGroup Condition="'$(CI_MANIFEST_KEY_PASSWORD)' != ''">
     <ManifestKeyPassword>$(CI_MANIFEST_KEY_PASSWORD)</ManifestKeyPassword>
   </PropertyGroup>
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(CI_MANIFEST_CERT_THUMBPRINT)' == ''">
     <ManifestCertificateThumbprint>393E44D2E90FA59249D78ED3245414B5364F0DB4</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CI_MANIFEST_CERT_THUMBPRINT)' != ''">
+    <ManifestCertificateThumbprint>$(CI_MANIFEST_CERT_THUMBPRINT)</ManifestCertificateThumbprint>
+    <ManifestKeyFile></ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>Resources\FunctionBox.ico</ApplicationIcon>
