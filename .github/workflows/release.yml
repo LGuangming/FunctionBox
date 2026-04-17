@@ -58,7 +58,7 @@ jobs:
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
-          filename: 'VSTO-Addin-Release.zip'
+          filename: 'FunctionBox-Addin-Release.zip'
           # 请将下方的路径替换为你的项目实际输出路径，例如 'YourVstoProject/bin/Release/'
           directory: '.'
           path: 'FunctionBox/bin/Release/'
