@@ -426,3 +426,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# FunctionBox project-specific local/generated files
+FunctionBox_TemporaryKey.pfx
+FunctionBox.csproj.user
+*.dll.manifest.pregam
+app.publish/

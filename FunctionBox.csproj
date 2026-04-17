@@ -1,4 +1,4 @@
-<Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!--
     This section defines project-level properties.
@@ -34,7 +34,7 @@
     <PublishUrl>C:\Users\Guangming\Desktop\</PublishUrl>
     <InstallUrl />
     <TargetCulture>zh-chs</TargetCulture>
-    <ApplicationVersion>0.0.1.0</ApplicationVersion>
+    <ApplicationVersion>0.1.0.0</ApplicationVersion>
     <AutoIncrementApplicationRevision>false</AutoIncrementApplicationRevision>
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>0</UpdateInterval>
@@ -215,25 +215,25 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="AlistUpdater.cs">
+    <Compile Include="Updater\AlistUpdater.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="addCodeForm.cs">
+    <Compile Include="Forms\addCodeForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="addCodeForm.Designer.cs">
+    <Compile Include="Forms\addCodeForm.Designer.cs">
       <DependentUpon>addCodeForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="VbaManagerForm.cs">
+    <Compile Include="Forms\VbaManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="VbaManagerForm.Designer.cs">
+    <Compile Include="Forms\VbaManagerForm.Designer.cs">
       <DependentUpon>VbaManagerForm.cs</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="addCodeForm.resx">
+    <EmbeddedResource Include="Forms\addCodeForm.resx">
       <DependentUpon>addCodeForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -244,7 +244,7 @@
     <EmbeddedResource Include="Ribbon1.resx">
       <DependentUpon>Ribbon1.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="VbaManagerForm.resx">
+    <EmbeddedResource Include="Forms\VbaManagerForm.resx">
       <DependentUpon>VbaManagerForm.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="FunctionBox_TemporaryKey.pfx" />
@@ -327,7 +327,7 @@
     <None Include="Resources\Tool List.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="replace_icon_211191.ico" />
+    <Content Include="Resources\FunctionBox.ico" />
     <None Include="Resources\app.ico" />
   </ItemGroup>
   <PropertyGroup>
@@ -340,11 +340,17 @@
   <PropertyGroup>
     <ManifestKeyFile>FunctionBox_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CI_MANIFEST_KEY_FILE)' != ''">
+    <ManifestKeyFile>$(CI_MANIFEST_KEY_FILE)</ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CI_MANIFEST_KEY_PASSWORD)' != ''">
+    <ManifestKeyPassword>$(CI_MANIFEST_KEY_PASSWORD)</ManifestKeyPassword>
+  </PropertyGroup>
   <PropertyGroup>
     <ManifestCertificateThumbprint>393E44D2E90FA59249D78ED3245414B5364F0DB4</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>replace_icon_211191.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\FunctionBox.ico</ApplicationIcon>
   </PropertyGroup>
   <!-- Include the build rules for a C# project. -->
   <PropertyGroup>

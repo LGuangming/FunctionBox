@@ -1,0 +1,86 @@
+name: Build and Release VSTO Add-in
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      CI_MANIFEST_KEY_FILE: ${{ github.workspace }}\ci-signing-cert.pfx
+      CI_MANIFEST_KEY_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      PUBLISH_DIR: ${{ github.workspace }}\artifacts\publish\
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore signing certificate from secret
+        shell: pwsh
+        run: |
+          $certBase64 = "${{ secrets.CERT_BASE64 }}"
+          if ([string]::IsNullOrWhiteSpace($certBase64)) {
+            throw "缺少 GitHub Secret: CERT_BASE64"
+          }
+
+          $bytes = [Convert]::FromBase64String($certBase64)
+          [IO.File]::WriteAllBytes("${env:CI_MANIFEST_KEY_FILE}", $bytes)
+
+      - name: Restore NuGet packages
+        run: nuget restore FunctionBox.sln
+
+      - name: Build solution
+        run: msbuild FunctionBox.sln /t:Build /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Publish VSTO package
+        run: msbuild FunctionBox.csproj /t:Publish /p:Configuration=Release /p:Platform="Any CPU" /p:PublishDir="${{ env.PUBLISH_DIR }}" /p:PublishUrl="${{ env.PUBLISH_DIR }}"
+
+      - name: Ensure setup.exe exists
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path "${env:PUBLISH_DIR}" -Filter setup.exe -Recurse | Select-Object -First 1
+          if ($null -eq $setup) {
+            throw "发布目录中未找到 setup.exe，请检查 Publish 结果。"
+          }
+
+      - name: Zip publish output
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: zip
+          filename: FunctionBox.zip
+          directory: ${{ env.PUBLISH_DIR }}
+          path: .
+
+      - name: Create Release and Upload Asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.PUBLISH_DIR }}\FunctionBox.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup certificate
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "${env:CI_MANIFEST_KEY_FILE}") {
+            Remove-Item -LiteralPath "${env:CI_MANIFEST_KEY_FILE}" -Force
+          }
