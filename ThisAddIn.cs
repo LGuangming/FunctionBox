@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Word = Microsoft.Office.Interop.Word;
 using System.Windows.Forms;
 using Microsoft.Vbe.Interop;
@@ -33,6 +34,9 @@ namespace FunctionBox
             "FunctionBox",
             "sum-check-debug.log");
         private const double SumTolerance = 0.001d;
+        private static readonly Regex IndependentNumberRegex = new Regex(
+            @"(?:\(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\)|（-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?）|-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)",
+            RegexOptions.Compiled);
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -250,14 +254,15 @@ namespace FunctionBox
             List<SelectedCellInfo> selectedCells = CollectSelectedCellsDirect(selection);
             AppendSumCheckDebug(debugLines, $"直接读取 Selection.Cells 得到 {selectedCells.Count} 个单元格");
 
-            // Word 在非连续表格选区时可能只暴露最后一段，这里做一次兜底反查
-            if (selectedCells.Count <= 1)
+            List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
+            if (fallbackCells.Count > 0)
             {
-                List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
-                if (fallbackCells.Count > selectedCells.Count)
+                List<SelectedCellInfo> mergedCells = MergeSelectedCells(selectedCells, fallbackCells);
+                if (mergedCells.Count != selectedCells.Count ||
+                    !HaveSameSelectedCellCoordinates(selectedCells, mergedCells))
                 {
-                    selectedCells = fallbackCells;
-                    AppendSumCheckDebug(debugLines, $"已切换为反查结果，共 {selectedCells.Count} 个单元格");
+                    selectedCells = mergedCells;
+                    AppendSumCheckDebug(debugLines, $"已合并反查结果，共 {selectedCells.Count} 个单元格");
                 }
             }
 
@@ -309,6 +314,63 @@ namespace FunctionBox
             }
 
             return result;
+        }
+        private static List<SelectedCellInfo> MergeSelectedCells(List<SelectedCellInfo> directCells, List<SelectedCellInfo> fallbackCells)
+        {
+            List<SelectedCellInfo> mergedCells = new List<SelectedCellInfo>();
+            HashSet<string> directCoordinates = new HashSet<string>();
+
+            if (directCells != null)
+            {
+                foreach (SelectedCellInfo directCell in directCells)
+                {
+                    directCoordinates.Add(GetCellCoordinateKey(directCell.RowIndex, directCell.ColumnIndex));
+                }
+            }
+
+            if (fallbackCells != null)
+            {
+                foreach (SelectedCellInfo fallbackCell in fallbackCells)
+                {
+                    string coordinate = GetCellCoordinateKey(fallbackCell.RowIndex, fallbackCell.ColumnIndex);
+                    if (!directCoordinates.Contains(coordinate))
+                    {
+                        mergedCells.Add(fallbackCell);
+                    }
+                }
+            }
+
+            if (directCells != null)
+            {
+                mergedCells.AddRange(directCells);
+            }
+
+            return mergedCells;
+        }
+        private static bool HaveSameSelectedCellCoordinates(List<SelectedCellInfo> leftCells, List<SelectedCellInfo> rightCells)
+        {
+            if (leftCells == null || rightCells == null)
+            {
+                return leftCells == rightCells;
+            }
+
+            if (leftCells.Count != rightCells.Count)
+            {
+                return false;
+            }
+
+            HashSet<string> coordinates = new HashSet<string>(
+                leftCells.Select(cell => GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex)));
+
+            foreach (SelectedCellInfo rightCell in rightCells)
+            {
+                if (!coordinates.Remove(GetCellCoordinateKey(rightCell.RowIndex, rightCell.ColumnIndex)))
+                {
+                    return false;
+                }
+            }
+
+            return coordinates.Count == 0;
         }
         private List<SelectedCellInfo> CollectSelectedCellsByToggleMarker(Word.Selection selection, List<string> debugLines)
         {
@@ -1124,9 +1186,368 @@ namespace FunctionBox
         }
         
         #endregion
+        private void ApplyTextProcessing(string undoName, Action<Word.Range> processAction)
+        {
+            Word.Application wordApp = this.Application;
+            if (wordApp.Documents.Count == 0) return;
+            
+            Word.Document doc = wordApp.ActiveDocument;
+            Word.Selection selection = wordApp.Selection;
+
+            wordApp.UndoRecord.StartCustomRecord(undoName);
+            wordApp.ScreenUpdating = false;
+
+            try
+            {
+                if (selection.Type == Word.WdSelectionType.wdSelectionIP)
+                {
+                    // 没有选中具体内容，应用到全文（遍历所有的 StoryRanges，包括正文、页眉页脚、表格等）
+                    foreach (Word.Range storyRange in doc.StoryRanges)
+                    {
+                        Word.Range currentRange = storyRange;
+                        while (currentRange != null)
+                        {
+                            processAction(currentRange);
+                            currentRange = currentRange.NextStoryRange;
+                        }
+                    }
+                }
+                else
+                {
+                    // 只应用到选中的内容
+                    Word.Range range = selection.Range;
+                    processAction(range);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"处理时出错: {ex.Message}");
+            }
+            finally
+            {
+                wordApp.ScreenUpdating = true;
+                wordApp.UndoRecord.EndCustomRecord();
+            }
+        }
+
+        public void AddThousandSeparator()
+        {
+            ApplyTextProcessing("添加千分符", range =>
+            {
+                string content = range.Text;
+                MatchCollection matches = IndependentNumberRegex.Matches(content);
+
+                for (int index = matches.Count - 1; index >= 0; index--)
+                {
+                    Match match = matches[index];
+                    if (!ShouldFormatIndependentNumber(content, match.Index, match.Length))
+                    {
+                        continue;
+                    }
+
+                    if (!TryFormatIndependentNumber(match.Value, out string formattedText))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(match.Value, formattedText, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    Word.Range numberRange = range.Duplicate;
+                    numberRange.SetRange(range.Start + match.Index, range.Start + match.Index + match.Length);
+
+                    string originalAsciiFont = numberRange.Font.NameAscii;
+                    numberRange.Text = formattedText;
+                    if (!string.IsNullOrWhiteSpace(originalAsciiFont))
+                    {
+                        numberRange.Font.NameAscii = originalAsciiFont;
+                    }
+                }
+            });
+        }
+        private static bool ShouldFormatIndependentNumber(string content, int startIndex, int length)
+        {
+            if (string.IsNullOrWhiteSpace(content) || length <= 0)
+            {
+                return false;
+            }
+
+            int endIndex = startIndex + length;
+            char? previousChar = startIndex > 0 ? content[startIndex - 1] : (char?)null;
+            char? nextChar = endIndex < content.Length ? content[endIndex] : (char?)null;
+
+            if (previousChar.HasValue)
+            {
+                char value = previousChar.Value;
+                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '/' || value == '\\')
+                {
+                    return false;
+                }
+
+                if (value == '第')
+                {
+                    return false;
+                }
+            }
+
+            if (nextChar.HasValue)
+            {
+                char value = nextChar.Value;
+                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '-' || value == '/' || value == '\\')
+                {
+                    return false;
+                }
+
+                if (value == '年' || value == '月' || value == '日' || value == '时' || value == '分' || value == '秒')
+                {
+                    return false;
+                }
+            }
+
+            string numericText = content.Substring(startIndex, length);
+            string openingBracket;
+            string closingBracket;
+            UnwrapNumericWrapper(ref numericText, out openingBracket, out closingBracket);
+
+            int decimalPointIndex = numericText.IndexOf('.');
+            string integerPart = decimalPointIndex >= 0
+                ? numericText.Substring(0, decimalPointIndex)
+                : numericText;
+
+            integerPart = integerPart.Replace(",", string.Empty);
+            return integerPart.Length >= 4 && !integerPart.StartsWith("0", StringComparison.Ordinal);
+        }
+        private static bool TryFormatIndependentNumber(string originalText, out string formattedText)
+        {
+            formattedText = originalText;
+            if (string.IsNullOrWhiteSpace(originalText))
+            {
+                return false;
+            }
+
+            string numericText = originalText;
+            string openingBracket;
+            string closingBracket;
+            UnwrapNumericWrapper(ref numericText, out openingBracket, out closingBracket);
+
+            bool isNegative = numericText.StartsWith("-", StringComparison.Ordinal);
+            if (isNegative)
+            {
+                numericText = numericText.Substring(1);
+            }
+
+            string[] parts = numericText.Split('.');
+            if (parts.Length > 2)
+            {
+                return false;
+            }
+
+            string integerPart = parts[0].Replace(",", string.Empty);
+            if (!Regex.IsMatch(integerPart, @"^\d+$"))
+            {
+                return false;
+            }
+
+            if (parts.Length == 2 && !Regex.IsMatch(parts[1], @"^\d+$"))
+            {
+                return false;
+            }
+
+            string formattedIntegerPart = Regex.Replace(integerPart, @"\B(?=(\d{3})+(?!\d))", ",");
+            formattedText = isNegative
+                ? "-" + formattedIntegerPart
+                : formattedIntegerPart;
+
+            if (parts.Length == 2)
+            {
+                formattedText += "." + parts[1];
+            }
+
+            if (!string.IsNullOrEmpty(openingBracket) && !string.IsNullOrEmpty(closingBracket))
+            {
+                formattedText = openingBracket + formattedText + closingBracket;
+            }
+
+            return true;
+        }
+        private static void UnwrapNumericWrapper(ref string numericText, out string openingBracket, out string closingBracket)
+        {
+            openingBracket = string.Empty;
+            closingBracket = string.Empty;
+
+            if (string.IsNullOrEmpty(numericText) || numericText.Length < 2)
+            {
+                return;
+            }
+
+            if (numericText.StartsWith("(", StringComparison.Ordinal) && numericText.EndsWith(")", StringComparison.Ordinal))
+            {
+                openingBracket = "(";
+                closingBracket = ")";
+                numericText = numericText.Substring(1, numericText.Length - 2);
+                return;
+            }
+
+            if (numericText.StartsWith("（", StringComparison.Ordinal) && numericText.EndsWith("）", StringComparison.Ordinal))
+            {
+                openingBracket = "（";
+                closingBracket = "）";
+                numericText = numericText.Substring(1, numericText.Length - 2);
+            }
+        }
+        private static bool IsAsciiIdentifierCharacter(char value)
+        {
+            return (value >= '0' && value <= '9') ||
+                (value >= 'A' && value <= 'Z') ||
+                (value >= 'a' && value <= 'z') ||
+                value == '_';
+        }
+
+        public void ConvertBrackets()
+        {
+            ApplyTextProcessing("中英括号转换", range =>
+            {
+                // 先探测是否存在半角括号
+                Word.Range tempRange1 = range.Duplicate;
+                Word.Find find1 = tempRange1.Find;
+                find1.ClearFormatting();
+                find1.Text = "(";
+                find1.MatchWildcards = false;
+                find1.Wrap = Word.WdFindWrap.wdFindStop;
+                bool hasHalf = find1.Execute();
+
+                if (!hasHalf)
+                {
+                    Word.Range tempRange2 = range.Duplicate;
+                    Word.Find find2 = tempRange2.Find;
+                    find2.ClearFormatting();
+                    find2.Text = ")";
+                    find2.MatchWildcards = false;
+                    find2.Wrap = Word.WdFindWrap.wdFindStop;
+                    if (find2.Execute()) hasHalf = true;
+                }
+
+                if (hasHalf)
+                {
+                    // 如果有半角，则将范围内的所有半角转换为全角
+                    ReplaceInRange(range.Duplicate, "(", "（");
+                    ReplaceInRange(range.Duplicate, ")", "）");
+                }
+                else
+                {
+                    // 如果没有半角，则将全角转换为半角
+                    ReplaceInRange(range.Duplicate, "（", "(");
+                    ReplaceInRange(range.Duplicate, "）", ")");
+                }
+            });
+        }
+
+        private void ReplaceInRange(Word.Range range, string findText, string replaceText)
+        {
+            Word.Find find = range.Find;
+            find.ClearFormatting();
+            find.Replacement.ClearFormatting();
+            find.Text = findText;
+            find.Replacement.Text = replaceText;
+            find.Format = false;
+            find.MatchCase = false;
+            find.MatchWholeWord = false;
+            find.MatchWildcards = false;
+            find.MatchSoundsLike = false;
+            find.MatchAllWordForms = false;
+            find.Wrap = Word.WdFindWrap.wdFindStop;
+
+            find.Execute(Replace: Word.WdReplace.wdReplaceAll);
+        }
+
+        public void ToggleNegativeFormat()
+        {
+            ApplyTextProcessing("负号格式转换", range =>
+            {
+                Word.Range searchRange = range.Duplicate;
+                Word.Find find = searchRange.Find;
+                find.ClearFormatting();
+                // 查找负号加数字的情况：-100 或 -1,000.50
+                find.Text = "-[0-9][0-9.,]@";
+                find.MatchWildcards = true;
+                find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                bool foundNegative = false;
+                while (find.Execute())
+                {
+                    foundNegative = true;
+                    string text = searchRange.Text;
+                    if (text.StartsWith("-"))
+                    {
+                        searchRange.Text = "(" + text.Substring(1) + ")";
+                    }
+                    searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                }
+
+                // 补充处理单个数字：-1 -> (1)
+                searchRange = range.Duplicate;
+                find = searchRange.Find;
+                find.ClearFormatting();
+                find.Text = "-[0-9]";
+                find.MatchWildcards = true;
+                find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                while (find.Execute())
+                {
+                    foundNegative = true;
+                    string text = searchRange.Text;
+                    if (text.Length == 2 && text.StartsWith("-"))
+                    {
+                        searchRange.Text = "(" + text.Substring(1) + ")";
+                    }
+                    searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                }
+
+                // 如果没有找到负号，则尝试查找半角括号包围的数字并转为负号
+                if (!foundNegative)
+                {
+                    searchRange = range.Duplicate;
+                    find = searchRange.Find;
+                    find.ClearFormatting();
+                    // 查找半角括号包围的数字
+                    find.Text = "\\([0-9][0-9.,]@\\)";
+                    find.MatchWildcards = true;
+                    find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                    while (find.Execute())
+                    {
+                        string text = searchRange.Text;
+                        if (text.StartsWith("(") && text.EndsWith(")"))
+                        {
+                            searchRange.Text = "-" + text.Substring(1, text.Length - 2);
+                        }
+                        searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                    }
+
+                    // 补充处理单个数字：(1) -> -1
+                    searchRange = range.Duplicate;
+                    find = searchRange.Find;
+                    find.ClearFormatting();
+                    find.Text = "\\([0-9]\\)";
+                    find.MatchWildcards = true;
+                    find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                    while (find.Execute())
+                    {
+                        string text = searchRange.Text;
+                        if (text.Length == 3 && text.StartsWith("(") && text.EndsWith(")"))
+                        {
+                            searchRange.Text = "-" + text.Substring(1, 1);
+                        }
+                        searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                    }
+                }
+            });
+        }
     }
 }
-
 
 
 

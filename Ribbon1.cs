@@ -40,6 +40,18 @@ namespace FunctionBox
             // 调用ThisAddIn中的方法
             Globals.ThisAddIn.ClearDocumentBackground();
         }
+        private void btnAddThousand_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.AddThousandSeparator();
+        }
+        private void btnBracketConvert_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.ConvertBrackets();
+        }
+        private void bthNegativeFormat_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.ToggleNegativeFormat();
+        }
         private void btnToolBox_Click(object sender, RibbonControlEventArgs e)
         {
             if (vbaManagerForm == null || vbaManagerForm.IsDisposed)

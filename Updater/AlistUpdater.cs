@@ -14,6 +14,7 @@ namespace FunctionBox
     public static class AlistUpdater
     {
         private const string LatestReleaseApiUrl = "https://api.github.com/repos/LGuangming/FunctionBox/releases/latest";
+        private const string GitHubCdnPrefix = "https://gh.api.99988866.xyz/";
         private const string PreferredAssetName = "FunctionBox.zip";
 
         public static async Task CheckAndUpdateAsync()
@@ -22,6 +23,8 @@ namespace FunctionBox
             try
             {
                 statusForm = new UpdateStatusForm();
+                Version localVersion = GetLocalVersion();
+                statusForm.SetVersionText($"当前版本：{FormatVersion(localVersion)}");
 
                 statusForm.UpdateStatus("正在检查更新...");
                 statusForm.SetIndeterminate(true);
@@ -29,7 +32,6 @@ namespace FunctionBox
                 statusForm.SafeActivate();
 
                 ReleaseInfo release = await GetLatestReleaseAsync();
-                Version localVersion = GetLocalVersion();
 
                 if (release.Version <= localVersion)
                 {
@@ -101,47 +103,63 @@ namespace FunctionBox
 
         private static async Task<ReleaseInfo> GetLatestReleaseAsync()
         {
-            using (WebClient client = CreateWebClient())
+            Exception lastException = null;
+
+            foreach (string apiUrl in GetCandidateUrls(LatestReleaseApiUrl))
             {
-                string json = await client.DownloadStringTaskAsync(LatestReleaseApiUrl);
-                JObject releaseObject = JObject.Parse(json);
-
-                string tagName = releaseObject["tag_name"]?.ToString();
-                if (!TryParseReleaseVersion(tagName, out Version version))
+                try
                 {
-                    throw new InvalidOperationException("无法解析 GitHub Release 版本号。");
+                    using (WebClient client = CreateWebClient())
+                    {
+                        string json = await client.DownloadStringTaskAsync(apiUrl);
+                        JObject releaseObject = JObject.Parse(json);
+
+                        string tagName = releaseObject["tag_name"]?.ToString();
+                        if (!TryParseReleaseVersion(tagName, out Version version))
+                        {
+                            throw new InvalidOperationException("无法解析 GitHub Release 版本号。");
+                        }
+
+                        JArray assets = releaseObject["assets"] as JArray;
+                        if (assets == null || assets.Count == 0)
+                        {
+                            throw new InvalidOperationException("最新 Release 未包含可下载资源。");
+                        }
+
+                        JObject asset = assets
+                            .OfType<JObject>()
+                            .FirstOrDefault(item => string.Equals(item["name"]?.ToString(), PreferredAssetName, StringComparison.OrdinalIgnoreCase))
+                            ?? assets.OfType<JObject>().FirstOrDefault(item => item["name"]?.ToString().EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true);
+
+                        if (asset == null)
+                        {
+                            throw new InvalidOperationException("最新 Release 中未找到 zip 更新包。");
+                        }
+
+                        string assetUrl = asset["browser_download_url"]?.ToString();
+                        if (string.IsNullOrWhiteSpace(assetUrl))
+                        {
+                            throw new InvalidOperationException("Release 资源下载地址无效。");
+                        }
+
+                        return new ReleaseInfo
+                        {
+                            TagName = tagName,
+                            Version = version,
+                            AssetName = asset["name"]?.ToString(),
+                            AssetUrl = assetUrl
+                        };
+                    }
                 }
-
-                JArray assets = releaseObject["assets"] as JArray;
-                if (assets == null || assets.Count == 0)
+                catch (Exception ex)
                 {
-                    throw new InvalidOperationException("最新 Release 未包含可下载资源。");
+                    lastException = ex;
                 }
-
-                JObject asset = assets
-                    .OfType<JObject>()
-                    .FirstOrDefault(item => string.Equals(item["name"]?.ToString(), PreferredAssetName, StringComparison.OrdinalIgnoreCase))
-                    ?? assets.OfType<JObject>().FirstOrDefault(item => item["name"]?.ToString().EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true);
-
-                if (asset == null)
-                {
-                    throw new InvalidOperationException("最新 Release 中未找到 zip 更新包。");
-                }
-
-                string assetUrl = asset["browser_download_url"]?.ToString();
-                if (string.IsNullOrWhiteSpace(assetUrl))
-                {
-                    throw new InvalidOperationException("Release 资源下载地址无效。");
-                }
-
-                return new ReleaseInfo
-                {
-                    TagName = tagName,
-                    Version = version,
-                    AssetName = asset["name"]?.ToString(),
-                    AssetUrl = assetUrl
-                };
             }
+
+            throw new InvalidOperationException(
+                "无法获取最新 Release 信息，请检查 GitHub 或 CDN 网络连接。",
+                lastException);
         }
 
         private static async Task<string> DownloadAndPrepareInstallerAsync(ReleaseInfo release, UpdateStatusForm statusForm)
@@ -150,7 +168,7 @@ namespace FunctionBox
             Directory.CreateDirectory(tempDir);
 
             string zipPath = Path.Combine(tempDir, release.AssetName ?? PreferredAssetName);
-            await DownloadFileWithProgressAsync(release.AssetUrl, zipPath, statusForm);
+            await DownloadFileWithProgressAsync(GetCandidateUrls(release.AssetUrl), zipPath, statusForm);
 
             statusForm.UpdateStatus("正在解压更新包...");
             statusForm.SetIndeterminate(true);
@@ -181,7 +199,26 @@ namespace FunctionBox
             client.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
             return client;
         }
-        private static Task DownloadFileWithProgressAsync(string url, string destinationPath, UpdateStatusForm statusForm)
+        private static async Task DownloadFileWithProgressAsync(string[] urls, string destinationPath, UpdateStatusForm statusForm)
+        {
+            Exception lastException = null;
+
+            foreach (string url in urls)
+            {
+                try
+                {
+                    await DownloadFileWithProgressCoreAsync(url, destinationPath, statusForm);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                }
+            }
+
+            throw new InvalidOperationException("无法下载更新包，请检查 GitHub 或 CDN 网络连接。", lastException);
+        }
+        private static Task DownloadFileWithProgressCoreAsync(string url, string destinationPath, UpdateStatusForm statusForm)
         {
             TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
             WebClient client = CreateWebClient();
@@ -195,20 +232,21 @@ namespace FunctionBox
 
             client.DownloadFileCompleted += (sender, args) =>
             {
-                client.Dispose();
-
                 if (args.Cancelled)
                 {
+                    client.Dispose();
                     tcs.TrySetCanceled();
                     return;
                 }
 
                 if (args.Error != null)
                 {
+                    client.Dispose();
                     tcs.TrySetException(args.Error);
                     return;
                 }
 
+                client.Dispose();
                 statusForm.UpdateProgress(100, "下载完成");
                 tcs.TrySetResult(true);
             };
@@ -221,6 +259,36 @@ namespace FunctionBox
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
             return assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+        }
+        private static string[] GetCandidateUrls(string originalUrl)
+        {
+            if (string.IsNullOrWhiteSpace(originalUrl))
+            {
+                return Array.Empty<string>();
+            }
+
+            return new[]
+            {
+                originalUrl,
+                BuildCdnUrl(originalUrl)
+            }
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        }
+        private static string BuildCdnUrl(string originalUrl)
+        {
+            if (string.IsNullOrWhiteSpace(originalUrl))
+            {
+                return null;
+            }
+
+            if (originalUrl.StartsWith(GitHubCdnPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return originalUrl;
+            }
+
+            return GitHubCdnPrefix + originalUrl;
         }
 
         private static bool TryParseReleaseVersion(string tagName, out Version version)
@@ -314,6 +382,7 @@ namespace FunctionBox
         private sealed class UpdateStatusForm : Form
         {
             private readonly Label statusLabel;
+            private readonly Label versionLabel;
             private readonly ProgressBar progressBar;
 
             public UpdateStatusForm()
@@ -332,22 +401,33 @@ namespace FunctionBox
                 {
                     AutoSize = false,
                     Left = 20,
-                    Top = 18,
+                    Top = 16,
                     Width = 300,
-                    Height = 24,
+                    Height = 22,
                     Text = "准备中..."
+                };
+
+                versionLabel = new Label
+                {
+                    AutoSize = false,
+                    Left = 20,
+                    Top = 40,
+                    Width = 300,
+                    Height = 20,
+                    Text = "当前版本：未知"
                 };
 
                 progressBar = new ProgressBar
                 {
                     Left = 20,
-                    Top = 55,
+                    Top = 68,
                     Width = 300,
                     Style = ProgressBarStyle.Marquee,
                     MarqueeAnimationSpeed = 30
                 };
 
                 Controls.Add(statusLabel);
+                Controls.Add(versionLabel);
                 Controls.Add(progressBar);
             }
 
@@ -360,6 +440,16 @@ namespace FunctionBox
                 }
                 statusLabel.Text = message;
                 statusLabel.Refresh();
+            }
+            public void SetVersionText(string message)
+            {
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action<string>(SetVersionText), message);
+                    return;
+                }
+                versionLabel.Text = message;
+                versionLabel.Refresh();
             }
             public void SetIndeterminate(bool isIndeterminate)
             {

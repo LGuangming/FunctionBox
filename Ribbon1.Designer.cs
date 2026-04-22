@@ -45,7 +45,7 @@
             this.btnCheckSumDebug = this.Factory.CreateRibbonToggleButton();
             this.文字处理 = this.Factory.CreateRibbonGroup();
             this.btnAddThousand = this.Factory.CreateRibbonButton();
-            this.btnC = this.Factory.CreateRibbonButton();
+            this.btnBracketConvert = this.Factory.CreateRibbonButton();
             this.bthNegativeFormat = this.Factory.CreateRibbonButton();
             this.收纳箱 = this.Factory.CreateRibbonGroup();
             this.btnToolBox = this.Factory.CreateRibbonButton();
@@ -132,7 +132,7 @@
             // 文字处理
             // 
             this.文字处理.Items.Add(this.btnAddThousand);
-            this.文字处理.Items.Add(this.btnC);
+            this.文字处理.Items.Add(this.btnBracketConvert);
             this.文字处理.Items.Add(this.bthNegativeFormat);
             this.文字处理.Label = "文字处理";
             this.文字处理.Name = "文字处理";
@@ -142,11 +142,14 @@
             this.btnAddThousand.Description = "添加千分符";
             this.btnAddThousand.Label = "添加千分符号";
             this.btnAddThousand.Name = "btnAddThousand";
+            this.btnAddThousand.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddThousand_Click);
             // 
-            // btnC
+            // btnBracketConvert
             // 
-            this.btnC.Label = "中英括号转换";
-            this.btnC.Name = "btnC";
+            this.btnBracketConvert.Description = "中英括号转换";
+            this.btnBracketConvert.Label = "中英括号转换";
+            this.btnBracketConvert.Name = "btnBracketConvert";
+            this.btnBracketConvert.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnBracketConvert_Click);
             // 
             // bthNegativeFormat
             // 
@@ -154,6 +157,7 @@
             this.bthNegativeFormat.Label = "负号格式转换";
             this.bthNegativeFormat.Name = "bthNegativeFormat";
             this.bthNegativeFormat.ScreenTip = "负号及括号互转";
+            this.bthNegativeFormat.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.bthNegativeFormat_Click);
             // 
             // 收纳箱
             // 
@@ -246,7 +250,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnToolBox;
         internal Microsoft.Office.Tools.Ribbon.RibbonDropDown btnToolList;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExecuteVba;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnC;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnBracketConvert;
         public Microsoft.Office.Tools.Ribbon.RibbonButton btnAddThousand;
         public Microsoft.Office.Tools.Ribbon.RibbonButton bthNegativeFormat;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup 文字处理;

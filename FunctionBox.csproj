@@ -34,7 +34,11 @@
     <PublishUrl>C:\Users\Guangming\Desktop\</PublishUrl>
     <InstallUrl />
     <TargetCulture>zh-chs</TargetCulture>
-    <ApplicationVersion>0.1.0.0</ApplicationVersion>
+    <VersionNumber>0.1.0.0</VersionNumber>
+    <VersionDisplay>v$(VersionNumber)</VersionDisplay>
+    <AssemblyVersion>$(VersionNumber)</AssemblyVersion>
+    <FileVersion>$(VersionNumber)</FileVersion>
+    <ApplicationVersion>$(VersionNumber)</ApplicationVersion>
     <AutoIncrementApplicationRevision>false</AutoIncrementApplicationRevision>
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>0</UpdateInterval>
@@ -232,6 +236,11 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="$(IntermediateOutputPath)GeneratedVersionInfo.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <Visible>False</Visible>
+    </Compile>
     <Compile Include="Forms\VbaManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -353,6 +362,21 @@
   <PropertyGroup>
     <ApplicationIcon>Resources\FunctionBox.ico</ApplicationIcon>
   </PropertyGroup>
+  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <GeneratedVersionInfoFile>$(IntermediateOutputPath)GeneratedVersionInfo.cs</GeneratedVersionInfoFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <GeneratedVersionInfoLines Include="[assembly: System.Reflection.AssemblyVersion(&quot;$(AssemblyVersion)&quot;)]" />
+      <GeneratedVersionInfoLines Include="[assembly: System.Reflection.AssemblyFileVersion(&quot;$(FileVersion)&quot;)]" />
+      <GeneratedVersionInfoLines Include="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(VersionDisplay)&quot;)]" />
+    </ItemGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" Condition="!Exists('$(IntermediateOutputPath)')" />
+    <WriteLinesToFile
+      File="$(GeneratedVersionInfoFile)"
+      Overwrite="true"
+      Lines="@(GeneratedVersionInfoLines)" />
+  </Target>
   <!-- Include the build rules for a C# project. -->
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
