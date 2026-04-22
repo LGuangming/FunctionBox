@@ -64,7 +64,7 @@ jobs:
         run: msbuild FunctionBox.sln /t:Build /p:Configuration=Release /p:Platform="Any CPU" /p:ManifestKeyFile= /p:ManifestCertificateThumbprint="${{ env.CI_MANIFEST_CERT_THUMBPRINT }}"
 
       - name: Publish VSTO package
-        run: msbuild FunctionBox.csproj /t:Publish /p:Configuration=Release /p:Platform=AnyCPU /p:PublishDir="${{ env.PUBLISH_DIR }}" /p:PublishUrl="${{ env.PUBLISH_DIR }}" /p:ManifestKeyFile= /p:ManifestCertificateThumbprint="${{ env.CI_MANIFEST_CERT_THUMBPRINT }}"
+        run: msbuild src\FunctionBox\FunctionBox.csproj /t:Publish /p:Configuration=Release /p:Platform=AnyCPU /p:PublishDir="${{ env.PUBLISH_DIR }}" /p:PublishUrl="${{ env.PUBLISH_DIR }}" /p:ManifestKeyFile= /p:ManifestCertificateThumbprint="${{ env.CI_MANIFEST_CERT_THUMBPRINT }}"
 
       - name: Ensure setup.exe exists
         shell: pwsh
