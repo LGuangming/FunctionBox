@@ -35,16 +35,54 @@ namespace FunctionBox
             "sum-check-debug.log");
         private const double SumTolerance = 0.001d;
         private static readonly Regex IndependentNumberRegex = new Regex(
-            @"(?:\(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\)|（-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?）|-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)",
+            @"(?:\(-?[0-9][0-9,]*(?:\.\d+)?\)|（-?[0-9][0-9,]*(?:\.\d+)?）|-?[0-9][0-9,]*(?:\.\d+)?)",
             RegexOptions.Compiled);
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
             vbaTrustWarningShown = LoadVbaTrustWarningState();
 
+            // 自动尝试在注册表中开启 VBA 信任选项
+            EnableVbaTrustAutomatically();
+
             // 添加事件处理程序-删除临时VBA
             this.Application.DocumentBeforeClose += new Word.ApplicationEvents4_DocumentBeforeCloseEventHandler(Application_DocumentBeforeClose);
             SyncVbaShortcutBindings();
+        }
+
+        private void EnableVbaTrustAutomatically()
+        {
+            try
+            {
+                string version = this.Application.Version;
+                string keyPath = @"Software\Microsoft\Office\" + version + @"\Word\Security";
+                
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath, true))
+                {
+                    if (key != null)
+                    {
+                        object value = key.GetValue("AccessVBOM");
+                        if (value == null || (int)value != 1)
+                        {
+                            key.SetValue("AccessVBOM", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                        }
+                    }
+                    else
+                    {
+                        using (Microsoft.Win32.RegistryKey newKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(keyPath))
+                        {
+                            if (newKey != null)
+                            {
+                                newKey.SetValue("AccessVBOM", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // 静默失败，如果没有权限修改注册表则退回到常规的手动提示
+            }
         }
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
@@ -79,12 +117,6 @@ namespace FunctionBox
                     bool isRectangular = IsRectangularSelection(pair.Value);
                     AppendSumCheckDebug(debugLines, $"Table[{pair.Key}] 选中单元格={pair.Value.Count}, 是否规则矩形={isRectangular}");
 
-                    if (!isRectangular)
-                    {
-                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: true, "非连续序列兜底", debugLines);
-                        continue;
-                    }
-
                     int validatedGroups = 0;
                     var groupedByRow = pair.Value
                         .GroupBy(cell => cell.RowIndex)
@@ -101,14 +133,10 @@ namespace FunctionBox
                         validatedGroups++;
                     }
 
-                    // 非连续跨单元格兜底：按单元格顺序校验“前面数据之和 == 最后一项”
+                    // 如果没有任何一行有 >= 2 个单元格，进行兜底
                     if (validatedGroups == 0 && pair.Value.Count >= 2)
                     {
-                        var orderedCells = pair.Value
-                            .OrderBy(cell => cell.RowIndex)
-                            .ThenBy(cell => cell.ColumnIndex)
-                            .ToList();
-                        ValidateCellGroup(orderedCells, isLastCellAsTarget: true, "按行分组无有效组兜底", debugLines);
+                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: true, "单序列兜底", debugLines);
                     }
                 }
             }
@@ -138,12 +166,6 @@ namespace FunctionBox
                     bool isRectangular = IsRectangularSelection(pair.Value);
                     AppendSumCheckDebug(debugLines, $"Table[{pair.Key}] 选中单元格={pair.Value.Count}, 是否规则矩形={isRectangular}");
 
-                    if (!isRectangular)
-                    {
-                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: false, "非连续序列兜底", debugLines);
-                        continue;
-                    }
-
                     int validatedGroups = 0;
                     var groupedByColumn = pair.Value
                         .GroupBy(cell => cell.ColumnIndex)
@@ -160,14 +182,9 @@ namespace FunctionBox
                         validatedGroups++;
                     }
 
-                    // 非连续跨单元格兜底：按单元格顺序校验“前面数据之和 == 最后一项”
                     if (validatedGroups == 0 && pair.Value.Count >= 2)
                     {
-                        var orderedCells = pair.Value
-                            .OrderBy(cell => cell.RowIndex)
-                            .ThenBy(cell => cell.ColumnIndex)
-                            .ToList();
-                        ValidateCellGroup(orderedCells, isLastCellAsTarget: false, "按列分组无有效组兜底", debugLines);
+                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: false, "单序列兜底", debugLines);
                     }
                 }
             }
@@ -197,12 +214,6 @@ namespace FunctionBox
                     bool isRectangular = IsRectangularSelection(pair.Value);
                     AppendSumCheckDebug(debugLines, $"Table[{pair.Key}] 选中单元格={pair.Value.Count}, 是否规则矩形={isRectangular}");
 
-                    if (!isRectangular)
-                    {
-                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: true, "非连续序列兜底", debugLines);
-                        continue;
-                    }
-
                     int validatedGroups = 0;
                     var groupedByColumn = pair.Value
                         .GroupBy(cell => cell.ColumnIndex)
@@ -219,14 +230,9 @@ namespace FunctionBox
                         validatedGroups++;
                     }
 
-                    // 非连续跨单元格兜底：按单元格顺序校验“前面数据之和 == 最后一项”
                     if (validatedGroups == 0 && pair.Value.Count >= 2)
                     {
-                        var orderedCells = pair.Value
-                            .OrderBy(cell => cell.RowIndex)
-                            .ThenBy(cell => cell.ColumnIndex)
-                            .ToList();
-                        ValidateCellGroup(orderedCells, isLastCellAsTarget: true, "按列分组无有效组兜底", debugLines);
+                        ValidateAsSingleSequence(pair.Value, isLastCellAsTarget: true, "单序列兜底", debugLines);
                     }
                 }
             }
@@ -254,15 +260,36 @@ namespace FunctionBox
             List<SelectedCellInfo> selectedCells = CollectSelectedCellsDirect(selection);
             AppendSumCheckDebug(debugLines, $"直接读取 Selection.Cells 得到 {selectedCells.Count} 个单元格");
 
-            List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
-            if (fallbackCells.Count > 0)
+            bool needsFallback = selectedCells.Count < 2;
+            if (!needsFallback)
             {
-                List<SelectedCellInfo> mergedCells = MergeSelectedCells(selectedCells, fallbackCells);
-                if (mergedCells.Count != selectedCells.Count ||
-                    !HaveSameSelectedCellCoordinates(selectedCells, mergedCells))
+                try
                 {
-                    selectedCells = mergedCells;
-                    AppendSumCheckDebug(debugLines, $"已合并反查结果，共 {selectedCells.Count} 个单元格");
+                    if (selection.Range.Cells.Count > selectedCells.Count)
+                    {
+                        needsFallback = true;
+                        AppendSumCheckDebug(debugLines, $"检测到选区外框包围的单元格数({selection.Range.Cells.Count})大于 Selection.Cells，确认为非连续选区");
+                    }
+                }
+                catch
+                {
+                    needsFallback = true; // 如果报错说明表格复杂，稳妥起见执行反查
+                    AppendSumCheckDebug(debugLines, $"检测外框单元格时引发异常，降级执行反查");
+                }
+            }
+
+            if (needsFallback)
+            {
+                List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
+                if (fallbackCells.Count > 0)
+                {
+                    List<SelectedCellInfo> mergedCells = MergeSelectedCells(selectedCells, fallbackCells);
+                    if (mergedCells.Count != selectedCells.Count ||
+                        !HaveSameSelectedCellCoordinates(selectedCells, mergedCells))
+                    {
+                        selectedCells = mergedCells;
+                        AppendSumCheckDebug(debugLines, $"已合并反查结果，共 {selectedCells.Count} 个单元格");
+                    }
                 }
             }
 
@@ -375,44 +402,26 @@ namespace FunctionBox
         private List<SelectedCellInfo> CollectSelectedCellsByToggleMarker(Word.Selection selection, List<string> debugLines)
         {
             List<SelectedCellInfo> result = new List<SelectedCellInfo>();
-
-            if (selection == null || selection.Range == null || selection.Range.Tables.Count == 0)
-            {
-                return result;
-            }
+            if (selection == null || selection.Range == null || selection.Range.Tables.Count == 0) return result;
 
             Word.Table table = selection.Range.Tables[1];
-            Dictionary<string, int> originalBoldValues = new Dictionary<string, int>();
+            // 使用一个极其罕见的字间距值作为标记
+            float markerKerning = 9.87f;
 
             try
             {
-                for (int rowIndex = 1; rowIndex <= table.Rows.Count; rowIndex++)
+                // 1. 给选区打上标记（一次 COM 调用）
+                selection.Font.Kerning = markerKerning;
+
+                // 2. 遍历表格所有单元格，检查哪些被标记了
+                //    使用 table.Range.Cells 平铺集合，安全处理合并单元格
+                foreach (Word.Cell cell in table.Range.Cells)
                 {
-                    Word.Row row = table.Rows[rowIndex];
-                    for (int columnIndex = 1; columnIndex <= row.Cells.Count; columnIndex++)
+                    try
                     {
-                        Word.Cell cell = row.Cells[columnIndex];
-                        originalBoldValues[GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex)] = cell.Range.Bold;
-                    }
-                }
-
-                selection.Font.Bold = (int)Word.WdConstants.wdToggle;
-
-                for (int rowIndex = 1; rowIndex <= table.Rows.Count; rowIndex++)
-                {
-                    Word.Row row = table.Rows[rowIndex];
-                    for (int columnIndex = 1; columnIndex <= row.Cells.Count; columnIndex++)
-                    {
-                        Word.Cell cell = row.Cells[columnIndex];
-                        string key = GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex);
-
-                        int originalBold;
-                        if (!originalBoldValues.TryGetValue(key, out originalBold))
-                        {
-                            continue;
-                        }
-
-                        if (cell.Range.Bold != originalBold)
+                        float k = cell.Range.Font.Kerning;
+                        // 浮点比较用容差
+                        if (Math.Abs(k - markerKerning) < 0.01f)
                         {
                             result.Add(new SelectedCellInfo
                             {
@@ -422,6 +431,7 @@ namespace FunctionBox
                             });
                         }
                     }
+                    catch { /* 跳过无法读取的合并残留格 */ }
                 }
             }
             catch (Exception ex)
@@ -430,37 +440,19 @@ namespace FunctionBox
             }
             finally
             {
-                try
-                {
-                    for (int rowIndex = 1; rowIndex <= table.Rows.Count; rowIndex++)
-                    {
-                        Word.Row row = table.Rows[rowIndex];
-                        for (int columnIndex = 1; columnIndex <= row.Cells.Count; columnIndex++)
-                        {
-                            Word.Cell cell = row.Cells[columnIndex];
-                            string key = GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex);
-
-                            int originalBold;
-                            if (originalBoldValues.TryGetValue(key, out originalBold))
-                            {
-                                cell.Range.Bold = originalBold;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // 恢复失败不阻断主流程
-                }
+                // 3. 使用撤销完美恢复所有格式（不会破坏任何字体属性）
+                try { Application.ActiveDocument.Undo(); } catch { }
             }
 
-            result = result
-                .OrderBy(cell => cell.RowIndex)
-                .ThenBy(cell => cell.ColumnIndex)
-                .ToList();
-
             AppendSumCheckDebug(debugLines, $"非连续选区反查得到 {result.Count} 个单元格");
-            return result;
+
+            // 去重并排序
+            return result
+                .GroupBy(c => c.RowIndex + "_" + c.ColumnIndex)
+                .Select(g => g.First())
+                .OrderBy(c => c.RowIndex)
+                .ThenBy(c => c.ColumnIndex)
+                .ToList();
         }
         private static string GetCellCoordinateKey(int rowIndex, int columnIndex)
         {
@@ -520,13 +512,23 @@ namespace FunctionBox
 
             double targetValue = ParseCellValue(GetCellText(targetCell));
             bool isMatch = Math.Abs(sum - targetValue) < SumTolerance;
-            targetCell.Shading.BackgroundPatternColor = isMatch
-                ? Word.WdColor.wdColorLightGreen
-                : Word.WdColor.wdColorYellow;
 
+            // 彻底去除文字高亮，并将所有可能的底纹（段落、文字、单元格）全部强制刷成目标颜色
+            Word.WdColor color = isMatch ? Word.WdColor.wdColorLightGreen : Word.WdColor.wdColorYellow;
+            targetCell.Range.HighlightColorIndex = Word.WdColorIndex.wdNoHighlight;
+            try { targetCell.Range.Font.Shading.BackgroundPatternColor = color; } catch { }
+            try { targetCell.Range.ParagraphFormat.Shading.BackgroundPatternColor = color; } catch { }
+            try { targetCell.Range.Shading.BackgroundPatternColor = color; } catch { }
+            targetCell.Shading.BackgroundPatternColor = color;
+
+            string resultIcon = isMatch ? "通过 ✅" : "失败 ❌";
             AppendSumCheckDebug(
                 debugLines,
-                $"{context}: 顺序单元格={FormatCellSequence(orderedCells)}, 目标={FormatCellIdentity(orderedCells[targetIndex])}, 求和={sum}, 目标值={targetValue}, 结果={(isMatch ? "通过" : "失败")}");
+                $"\n  [{context}]\n" +
+                $"    - 校验结果 : {resultIcon}\n" +
+                $"    - 目标单元格: {FormatCellIdentity(orderedCells[targetIndex])}\n" +
+                $"    - 参与求和格: {FormatCellSequence(orderedCells, targetIndex)}\n" +
+                $"    - 实际计算和: {sum:N2}");
         }
         private void ValidateCellGroup(List<SelectedCellInfo> cells, bool isLastCellAsTarget, string context, List<string> debugLines)
         {
@@ -553,13 +555,22 @@ namespace FunctionBox
             double targetValue = ParseCellValue(GetCellText(targetCell));
             bool isMatch = Math.Abs(sum - targetValue) < SumTolerance;
 
-            targetCell.Shading.BackgroundPatternColor = isMatch
-                ? Word.WdColor.wdColorLightGreen
-                : Word.WdColor.wdColorYellow;
+            // 彻底去除文字高亮，并将所有可能的底纹（段落、文字、单元格）全部强制刷成目标颜色
+            Word.WdColor color = isMatch ? Word.WdColor.wdColorLightGreen : Word.WdColor.wdColorYellow;
+            targetCell.Range.HighlightColorIndex = Word.WdColorIndex.wdNoHighlight;
+            try { targetCell.Range.Font.Shading.BackgroundPatternColor = color; } catch { }
+            try { targetCell.Range.ParagraphFormat.Shading.BackgroundPatternColor = color; } catch { }
+            try { targetCell.Range.Shading.BackgroundPatternColor = color; } catch { }
+            targetCell.Shading.BackgroundPatternColor = color;
 
+            string resultIcon = isMatch ? "通过 ✅" : "失败 ❌";
             AppendSumCheckDebug(
                 debugLines,
-                $"{context}: 单元格={FormatCellSequence(cells)}, 目标={FormatCellIdentity(cells[targetIndex])}, 求和={sum}, 目标值={targetValue}, 结果={(isMatch ? "通过" : "失败")}");
+                $"\n  [{context}]\n" +
+                $"    - 校验结果 : {resultIcon}\n" +
+                $"    - 目标单元格: {FormatCellIdentity(cells[targetIndex])}\n" +
+                $"    - 参与求和格: {FormatCellSequence(cells, targetIndex)}\n" +
+                $"    - 实际计算和: {sum:N2}");
         }
         private List<string> BeginSumCheckDebug(string modeName, Word.Selection selection)
         {
@@ -589,8 +600,9 @@ namespace FunctionBox
                     Directory.CreateDirectory(directory);
                 }
 
-                string block = string.Join(Environment.NewLine, debugLines) +
-                    Environment.NewLine + new string('-', 60) + Environment.NewLine;
+                string block = "\r\n============================================================\r\n" + 
+                               string.Join(Environment.NewLine, debugLines) + 
+                               "\r\n============================================================\r\n";
                 File.AppendAllText(SumCheckDebugLogPath, block);
             }
             catch
@@ -598,10 +610,17 @@ namespace FunctionBox
                 // 调试日志失败不影响主流程
             }
 
-            string preview = string.Join(Environment.NewLine, debugLines.Take(12));
+            // 弹出显示格式化的校验结果摘要
+            string preview = string.Join(Environment.NewLine, debugLines);
+            if (preview.Length > 1500)
+            {
+                preview = preview.Substring(0, 1500) + "\n...\n(内容过长已截断，完整信息请查看日志文件)";
+            }
             MessageBox.Show(
-                "加总调试输出已生成。\n日志文件: " + SumCheckDebugLogPath + "\n\n" + preview,
-                "加总调试模式");
+                preview,
+                "加总检查调试报告",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
         private static void AppendSumCheckDebug(List<string> debugLines, string line)
         {
@@ -614,21 +633,14 @@ namespace FunctionBox
         }
         private static string FormatCellIdentity(SelectedCellInfo cell)
         {
-            if (cell == null)
-            {
-                return "null";
-            }
-
-            return $"R{cell.RowIndex}C{cell.ColumnIndex}(Order={cell.SelectionOrder},Text={GetCellText(cell.Cell)})";
+            if (cell == null) return "null";
+            return $"第{cell.RowIndex}行第{cell.ColumnIndex}列({GetCellText(cell.Cell)})";
         }
-        private static string FormatCellSequence(List<SelectedCellInfo> cells)
+        private static string FormatCellSequence(List<SelectedCellInfo> cells, int excludeIndex = -1)
         {
-            if (cells == null || cells.Count == 0)
-            {
-                return "[]";
-            }
-
-            return "[" + string.Join(", ", cells.Select(FormatCellIdentity)) + "]";
+            if (cells == null || cells.Count == 0) return "[]";
+            var participating = excludeIndex >= 0 ? cells.Where((c, i) => i != excludeIndex).ToList() : cells;
+            return string.Join(", ", participating.Select(c => $"第{c.RowIndex}行第{c.ColumnIndex}列({GetCellText(c.Cell)})"));
         }
         private static string GetCellText(Word.Cell cell)
         {
@@ -694,10 +706,18 @@ namespace FunctionBox
 
             try
             {
-                // 清除选中区域的背景色和高亮色
+                // 全面清除选中区域的所有背景色和高亮色
                 Word.Range selectedRange = selection.Range;
-                selectedRange.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic;
                 selectedRange.HighlightColorIndex = Word.WdColorIndex.wdNoHighlight;
+                try { selectedRange.Font.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+                try { selectedRange.ParagraphFormat.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+                try { selectedRange.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+
+                // 确保同时也清除了单元格本身的背景色
+                if (selection.Cells.Count > 0)
+                {
+                    try { selection.Cells.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+                }
             }
             finally
             {
@@ -718,17 +738,17 @@ namespace FunctionBox
                 // 获取整个文档的范围
                 Word.Range entireDocumentRange = document.Content;
 
-                // 清除整个文档的背景色
-                entireDocumentRange.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic;
-
-                // 清除整个文档的高亮色
+                // 全面清除整个文档的背景色和高亮色
                 entireDocumentRange.HighlightColorIndex = Word.WdColorIndex.wdNoHighlight;
+                try { entireDocumentRange.Font.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+                try { entireDocumentRange.ParagraphFormat.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
+                try { entireDocumentRange.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
 
-                // 清除表格的背景色
+                // 由于 entireDocumentRange 已经处理了所有的 Font 和 ParagraphFormat 级别，
+                // 我们只需要清理表格自身的 Shading，减少大量 COM 调用提升速度。
                 foreach (Word.Table table in document.Tables)
                 {
-                    table.Range.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic;
-                    table.Range.HighlightColorIndex = Word.WdColorIndex.wdNoHighlight;
+                    try { table.Shading.BackgroundPatternColor = Word.WdColor.wdColorAutomatic; } catch { }
                 }
 
                 // 清除形状（文本框等）的背景色
@@ -1108,7 +1128,13 @@ namespace FunctionBox
 
             if (!vbaTrustWarningShown)
             {
-                MessageBox.Show(warningMessage);
+                string helpText = warningMessage + "\n\n" +
+                                  "要使这些功能生效，请在 Word 中手动开启权限：\n" +
+                                  "1. 点击左上角【文件】->【选项】\n" +
+                                  "2. 选择【信任中心】-> 点击【信任中心设置】\n" +
+                                  "3. 选择【宏设置】\n" +
+                                  "4. 勾选【信任对 VBA 项目对象模型的访问】并确定。";
+                MessageBox.Show(helpText, "需要开启 VBA 信任权限", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 vbaTrustWarningShown = true;
                 SaveVbaTrustWarningState();
             }
@@ -1235,12 +1261,15 @@ namespace FunctionBox
             ApplyTextProcessing("添加千分符", range =>
             {
                 string content = range.Text;
-                MatchCollection matches = IndependentNumberRegex.Matches(content);
+                if (string.IsNullOrEmpty(content)) return;
 
-                for (int index = matches.Count - 1; index >= 0; index--)
+                MatchCollection matches = IndependentNumberRegex.Matches(content);
+                HashSet<string> processed = new HashSet<string>();
+
+                for (int index = 0; index < matches.Count; index++)
                 {
                     Match match = matches[index];
-                    if (!ShouldFormatIndependentNumber(content, match.Index, match.Length))
+                    if (!ShouldFormatNumberString(match.Value))
                     {
                         continue;
                     }
@@ -1255,58 +1284,51 @@ namespace FunctionBox
                         continue;
                     }
 
-                    Word.Range numberRange = range.Duplicate;
-                    numberRange.SetRange(range.Start + match.Index, range.Start + match.Index + match.Length);
-
-                    string originalAsciiFont = numberRange.Font.NameAscii;
-                    numberRange.Text = formattedText;
-                    if (!string.IsNullOrWhiteSpace(originalAsciiFont))
+                    if (processed.Contains(match.Value))
                     {
-                        numberRange.Font.NameAscii = originalAsciiFont;
+                        continue;
+                    }
+                    processed.Add(match.Value);
+
+                    Word.Range searchRange = range.Duplicate;
+                    Word.Find find = searchRange.Find;
+                    find.ClearFormatting();
+                    find.Text = match.Value;
+                    find.MatchWildcards = false;
+                    find.MatchWholeWord = false;
+                    find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                    while (find.Execute())
+                    {
+                        if (searchRange.InRange(range))
+                        {
+                            if (ShouldFormatRange(searchRange))
+                            {
+                                string originalAsciiFont = searchRange.Font.NameAscii;
+                                searchRange.Text = formattedText;
+                                if (!string.IsNullOrWhiteSpace(originalAsciiFont))
+                                {
+                                    searchRange.Font.NameAscii = originalAsciiFont;
+                                }
+                                searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                            }
+                            else
+                            {
+                                searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                            }
+                        }
                     }
                 }
             });
         }
-        private static bool ShouldFormatIndependentNumber(string content, int startIndex, int length)
+        private static bool ShouldFormatNumberString(string matchValue)
         {
-            if (string.IsNullOrWhiteSpace(content) || length <= 0)
+            if (string.IsNullOrWhiteSpace(matchValue))
             {
                 return false;
             }
 
-            int endIndex = startIndex + length;
-            char? previousChar = startIndex > 0 ? content[startIndex - 1] : (char?)null;
-            char? nextChar = endIndex < content.Length ? content[endIndex] : (char?)null;
-
-            if (previousChar.HasValue)
-            {
-                char value = previousChar.Value;
-                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '/' || value == '\\')
-                {
-                    return false;
-                }
-
-                if (value == '第')
-                {
-                    return false;
-                }
-            }
-
-            if (nextChar.HasValue)
-            {
-                char value = nextChar.Value;
-                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '-' || value == '/' || value == '\\')
-                {
-                    return false;
-                }
-
-                if (value == '年' || value == '月' || value == '日' || value == '时' || value == '分' || value == '秒')
-                {
-                    return false;
-                }
-            }
-
-            string numericText = content.Substring(startIndex, length);
+            string numericText = matchValue;
             string openingBracket;
             string closingBracket;
             UnwrapNumericWrapper(ref numericText, out openingBracket, out closingBracket);
@@ -1317,7 +1339,65 @@ namespace FunctionBox
                 : numericText;
 
             integerPart = integerPart.Replace(",", string.Empty);
+            bool isNegative = integerPart.StartsWith("-", StringComparison.Ordinal);
+            if (isNegative)
+            {
+                integerPart = integerPart.Substring(1);
+            }
             return integerPart.Length >= 4 && !integerPart.StartsWith("0", StringComparison.Ordinal);
+        }
+
+        private static bool ShouldFormatRange(Word.Range foundRange)
+        {
+            string prevChar = "";
+            try
+            {
+                if (foundRange.Start > 0)
+                {
+                    Word.Range prevRange = foundRange.Document.Range(foundRange.Start - 1, foundRange.Start);
+                    prevChar = prevRange.Text;
+                }
+            }
+            catch { }
+
+            string nextChar = "";
+            try
+            {
+                if (foundRange.End < foundRange.Document.Content.End)
+                {
+                    Word.Range nextRange = foundRange.Document.Range(foundRange.End, foundRange.End + 1);
+                    nextChar = nextRange.Text;
+                }
+            }
+            catch { }
+
+            if (!string.IsNullOrEmpty(prevChar))
+            {
+                char value = prevChar[0];
+                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '/' || value == '\\')
+                {
+                    return false;
+                }
+                if (value == '第')
+                {
+                    return false;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(nextChar))
+            {
+                char value = nextChar[0];
+                if (IsAsciiIdentifierCharacter(value) || value == '.' || value == ',' || value == '-' || value == '/' || value == '\\')
+                {
+                    return false;
+                }
+                if (value == '年' || value == '月' || value == '日' || value == '时' || value == '分' || value == '秒')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
         private static bool TryFormatIndependentNumber(string originalText, out string formattedText)
         {
@@ -1409,46 +1489,48 @@ namespace FunctionBox
         {
             ApplyTextProcessing("中英括号转换", range =>
             {
-                // 先探测是否存在半角括号
-                Word.Range tempRange1 = range.Duplicate;
-                Word.Find find1 = tempRange1.Find;
-                find1.ClearFormatting();
-                find1.Text = "(";
-                find1.MatchWildcards = false;
-                find1.Wrap = Word.WdFindWrap.wdFindStop;
-                bool hasHalf = find1.Execute();
-
-                if (!hasHalf)
+                string text = "";
+                try
                 {
-                    Word.Range tempRange2 = range.Duplicate;
-                    Word.Find find2 = tempRange2.Find;
-                    find2.ClearFormatting();
-                    find2.Text = ")";
-                    find2.MatchWildcards = false;
-                    find2.Wrap = Word.WdFindWrap.wdFindStop;
-                    if (find2.Execute()) hasHalf = true;
+                    Word.Range sampleRange = range.Duplicate;
+                    // 取样前部分字符以判断转换方向，避免读取大文档全量Text导致内存溢出
+                    if (sampleRange.End - sampleRange.Start > 5000)
+                    {
+                        sampleRange.End = sampleRange.Start + 5000;
+                    }
+                    text = sampleRange.Text ?? "";
+                }
+                catch
+                {
+                    text = "";
                 }
 
-                if (hasHalf)
+                int halfCount = text.Count(c => c == '(' || c == ')');
+                int fullCount = text.Count(c => c == '（' || c == '）');
+
+                // 根据选区括号比例决定转换方向，实现更智能的双向转换
+                if (halfCount > 0 && halfCount >= fullCount)
                 {
-                    // 如果有半角，则将范围内的所有半角转换为全角
-                    ReplaceInRange(range.Duplicate, "(", "（");
-                    ReplaceInRange(range.Duplicate, ")", "）");
+                    ReplaceInRange(range.Duplicate, "(", "（", "宋体");
+                    ReplaceInRange(range.Duplicate, ")", "）", "宋体");
                 }
-                else
+                else if (fullCount > 0)
                 {
-                    // 如果没有半角，则将全角转换为半角
-                    ReplaceInRange(range.Duplicate, "（", "(");
-                    ReplaceInRange(range.Duplicate, "）", ")");
+                    ReplaceInRange(range.Duplicate, "（", "(", "Arial");
+                    ReplaceInRange(range.Duplicate, "）", ")", "Arial");
                 }
             });
         }
 
-        private void ReplaceInRange(Word.Range range, string findText, string replaceText)
+        private void ReplaceInRange(Word.Range range, string findText, string replaceText, string fontName = null)
         {
             Word.Find find = range.Find;
             find.ClearFormatting();
             find.Replacement.ClearFormatting();
+            if (!string.IsNullOrEmpty(fontName))
+            {
+                find.Replacement.Font.Name = fontName;
+            }
             find.Text = findText;
             find.Replacement.Text = replaceText;
             find.Format = false;
@@ -1466,94 +1548,60 @@ namespace FunctionBox
         {
             ApplyTextProcessing("负号格式转换", range =>
             {
-                Word.Range searchRange = range.Duplicate;
-                Word.Find find = searchRange.Find;
-                find.ClearFormatting();
-                // 查找负号加数字的情况：-100 或 -1,000.50
-                find.Text = "-[0-9][0-9.,]@";
-                find.MatchWildcards = true;
-                find.Wrap = Word.WdFindWrap.wdFindStop;
+                string content = range.Text;
+                if (string.IsNullOrEmpty(content)) return;
 
-                bool foundNegative = false;
-                while (find.Execute())
+                // 匹配负号数字和括号数字，支持千分位和小数点
+                Regex negativeRegex = new Regex(@"(-[0-9][0-9,]*(?:\.\d+)?|\([0-9][0-9,]*(?:\.\d+)?\)|（[0-9][0-9,]*(?:\.\d+)?）)");
+                MatchCollection matches = negativeRegex.Matches(content);
+                HashSet<string> processed = new HashSet<string>();
+
+                bool hasNegative = matches.Cast<Match>().Any(m => m.Value.StartsWith("-"));
+                bool toBrackets = hasNegative; // 默认只要有负号，就全转成括号。如果没有负号但有括号，才转成负号
+
+                for (int index = 0; index < matches.Count; index++)
                 {
-                    foundNegative = true;
-                    string text = searchRange.Text;
-                    if (text.StartsWith("-"))
+                    Match match = matches[index];
+                    string val = match.Value;
+
+                    if (toBrackets && !val.StartsWith("-")) continue;
+                    if (!toBrackets && val.StartsWith("-")) continue;
+
+                    if (processed.Contains(val)) continue;
+                    processed.Add(val);
+
+                    string formattedText = "";
+                    if (val.StartsWith("-"))
                     {
-                        searchRange.Text = "(" + text.Substring(1) + ")";
+                        formattedText = "(" + val.Substring(1) + ")";
                     }
-                    searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
-                }
-
-                // 补充处理单个数字：-1 -> (1)
-                searchRange = range.Duplicate;
-                find = searchRange.Find;
-                find.ClearFormatting();
-                find.Text = "-[0-9]";
-                find.MatchWildcards = true;
-                find.Wrap = Word.WdFindWrap.wdFindStop;
-
-                while (find.Execute())
-                {
-                    foundNegative = true;
-                    string text = searchRange.Text;
-                    if (text.Length == 2 && text.StartsWith("-"))
+                    else if (val.StartsWith("(") || val.StartsWith("（"))
                     {
-                        searchRange.Text = "(" + text.Substring(1) + ")";
+                        formattedText = "-" + val.Substring(1, val.Length - 2);
                     }
-                    searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
-                }
 
-                // 如果没有找到负号，则尝试查找半角括号包围的数字并转为负号
-                if (!foundNegative)
-                {
-                    searchRange = range.Duplicate;
-                    find = searchRange.Find;
+                    Word.Range searchRange = range.Duplicate;
+                    Word.Find find = searchRange.Find;
                     find.ClearFormatting();
-                    // 查找半角括号包围的数字
-                    find.Text = "\\([0-9][0-9.,]@\\)";
-                    find.MatchWildcards = true;
+                    find.Text = val;
+                    find.MatchWildcards = false;
                     find.Wrap = Word.WdFindWrap.wdFindStop;
 
                     while (find.Execute())
                     {
-                        string text = searchRange.Text;
-                        if (text.StartsWith("(") && text.EndsWith(")"))
+                        if (searchRange.InRange(range))
                         {
-                            searchRange.Text = "-" + text.Substring(1, text.Length - 2);
+                            string originalAsciiFont = searchRange.Font.NameAscii;
+                            searchRange.Text = formattedText;
+                            if (!string.IsNullOrWhiteSpace(originalAsciiFont))
+                            {
+                                searchRange.Font.NameAscii = originalAsciiFont;
+                            }
+                            searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
                         }
-                        searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
-                    }
-
-                    // 补充处理单个数字：(1) -> -1
-                    searchRange = range.Duplicate;
-                    find = searchRange.Find;
-                    find.ClearFormatting();
-                    find.Text = "\\([0-9]\\)";
-                    find.MatchWildcards = true;
-                    find.Wrap = Word.WdFindWrap.wdFindStop;
-
-                    while (find.Execute())
-                    {
-                        string text = searchRange.Text;
-                        if (text.Length == 3 && text.StartsWith("(") && text.EndsWith(")"))
-                        {
-                            searchRange.Text = "-" + text.Substring(1, 1);
-                        }
-                        searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
                     }
                 }
             });
         }
     }
 }
-
-
-
-
-
-
-
-
-

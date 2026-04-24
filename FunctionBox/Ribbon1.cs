@@ -1,9 +1,7 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Ribbon;
 using Microsoft.Vbe.Interop;
-using static FunctionBox.VbaManagerForm;
-
 namespace FunctionBox
 {
     public partial class FunctionBoxRibbon
@@ -52,6 +50,11 @@ namespace FunctionBox
         {
             Globals.ThisAddIn.ToggleNegativeFormat();
         }
+        private void bthReplaceTool_Click(object sender, RibbonControlEventArgs e)
+        {
+            Forms.ReplaceToolForm replaceToolForm = new Forms.ReplaceToolForm();
+            replaceToolForm.Show();
+        }
         private void btnToolBox_Click(object sender, RibbonControlEventArgs e)
         {
             if (vbaManagerForm == null || vbaManagerForm.IsDisposed)
@@ -64,8 +67,10 @@ namespace FunctionBox
         }
         private void btnExecuteVba_Click(object sender, RibbonControlEventArgs e)
         {
-            if (btnToolList.SelectedItem?.Tag is VbaCode selectedCode)
+            var selectedItem = btnToolList.SelectedItem;
+            if (selectedItem != null && selectedItem.Tag is FunctionBox.VbaManagerForm.VbaCode)
             {
+                FunctionBox.VbaManagerForm.VbaCode selectedCode = (FunctionBox.VbaManagerForm.VbaCode)selectedItem.Tag;
                 ExecuteVbaCode(selectedCode.Code);
             }
             else
@@ -77,7 +82,8 @@ namespace FunctionBox
         {
             try
             {
-                if (!IsValidVbaCode(code) || !TryExtractMacroName(code, out string macroName))
+                string macroName;
+                if (!FunctionBox.VbaManagerForm.IsValidVbaCode(code) || !FunctionBox.VbaManagerForm.TryExtractMacroName(code, out macroName))
                 {
                     MessageBox.Show("VBA代码格式无效，无法执行。请检查是否以 Sub 开始并以 End Sub 结束。");
                     return;
@@ -129,16 +135,11 @@ namespace FunctionBox
 
         private async void btnUpdate_Click(object sender, RibbonControlEventArgs e)
         {
-            await AlistUpdater.CheckAndUpdateAsync();
+            await FunctionBox.AlistUpdater.CheckAndUpdateAsync();
         }
         private void btnCheckSumDebug_Click(object sender, RibbonControlEventArgs e)
         {
             Globals.ThisAddIn.SumCheckDebugModeEnabled = btnCheckSumDebug.Checked;
-            MessageBox.Show(
-                btnCheckSumDebug.Checked
-                    ? "加总调试模式已开启。执行检查后会弹出摘要并写入调试日志。"
-                    : "加总调试模式已关闭。",
-                "加总调试模式");
         }
 
     }

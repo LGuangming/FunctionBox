@@ -24,66 +24,70 @@ namespace FunctionBox
             {
                 statusForm = new UpdateStatusForm();
                 Version localVersion = GetLocalVersion();
-                statusForm.SetVersionText($"当前版本：{FormatVersion(localVersion)}");
 
+                statusForm.SetVersionText($"当前版本：{FormatVersion(localVersion)}");
                 statusForm.UpdateStatus("正在检查更新...");
                 statusForm.SetIndeterminate(true);
+                statusForm.SetActionButtonState(false, "正在检查...");
                 statusForm.SafeShow();
                 statusForm.SafeActivate();
 
-                ReleaseInfo release = await GetLatestReleaseAsync();
-
-                if (release.Version <= localVersion)
+                ReleaseInfo release;
+                try
                 {
-                    statusForm.SafeHide();
-                    ShowTopMostMessage(
-                        $"当前已是最新版本（{FormatVersion(localVersion)}）。",
-                        "更新提示",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                    release = await GetLatestReleaseAsync();
+                }
+                catch (Exception ex)
+                {
+                    statusForm.UpdateStatus($"检查失败：{ex.Message}");
+                    statusForm.SetIndeterminate(false);
+                    statusForm.SetActionButtonState(true, "关闭", isClose: true);
+                    await statusForm.WaitForUserActionAsync();
                     return;
                 }
 
-                statusForm.SafeHide();
-                DialogResult result = ShowTopMostMessage(
-                    $"发现新版本：{release.TagName}\n当前版本：{FormatVersion(localVersion)}\n\n是否现在下载并更新？",
-                    "更新提示",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Information);
+                if (release.Version <= localVersion)
+                {
+                    statusForm.UpdateStatus($"当前已是最新版本");
+                    statusForm.SetIndeterminate(false);
+                    statusForm.SetActionButtonState(true, "关闭", isClose: true);
+                    await statusForm.WaitForUserActionAsync();
+                    return;
+                }
 
-                if (result != DialogResult.Yes)
+                statusForm.UpdateStatus($"发现新版本：{release.TagName}，是否更新？");
+                statusForm.SetIndeterminate(false);
+                statusForm.SetActionButtonState(true, "立即更新", isClose: false);
+
+                bool proceed = await statusForm.WaitForUserActionAsync();
+                if (!proceed)
                 {
                     return;
                 }
 
                 statusForm.UpdateStatus("正在下载更新包...");
-                statusForm.SetIndeterminate(false);
+                statusForm.SetActionButtonState(false, "下载中...");
                 statusForm.UpdateProgress(0, "准备下载...");
-                statusForm.SafeShow();
-                statusForm.SafeActivate();
 
                 string setupPath = await DownloadAndPrepareInstallerAsync(release, statusForm);
 
-                statusForm.UpdateStatus("更新包准备完成，正在启动安装程序...");
+                statusForm.UpdateStatus("就绪！开始安装前请关闭所有 Word 窗口。");
                 statusForm.SetIndeterminate(true);
-                statusForm.SafeHide();
-                
-                ShowTopMostMessage(
-                    "更新包准备完成，点击“确定”后将启动安装程序。\n\n开始安装前请关闭所有 Word 窗口，以便顺利覆盖旧文件。",
-                    "更新准备完成",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                statusForm.SetActionButtonState(true, "开始安装", isClose: true);
+
+                await statusForm.WaitForUserActionAsync();
 
                 Process.Start(setupPath);
             }
             catch (Exception ex)
             {
-                statusForm?.SafeHide();
-                ShowTopMostMessage(
-                    $"检查或执行更新失败：{ex.Message}",
-                    "更新失败",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                if (statusForm != null && !statusForm.IsDisposed)
+                {
+                    statusForm.UpdateStatus($"错误：{ex.Message}");
+                    statusForm.SetIndeterminate(false);
+                    statusForm.SetActionButtonState(true, "关闭", isClose: true);
+                    await statusForm.WaitForUserActionAsync();
+                }
             }
             finally
             {
@@ -384,18 +388,20 @@ namespace FunctionBox
             private readonly Label statusLabel;
             private readonly Label versionLabel;
             private readonly ProgressBar progressBar;
+            private readonly Button actionButton;
+            private TaskCompletionSource<bool> _tcs;
+            private bool _isCloseAction;
 
             public UpdateStatusForm()
             {
-                Text = "更新中";
+                Text = "FunctionBox 更新程序";
                 StartPosition = FormStartPosition.CenterScreen;
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
                 ShowInTaskbar = false;
                 TopMost = true;
-                Width = 360;
-                Height = 130;
+                ClientSize = new System.Drawing.Size(340, 140);
 
                 statusLabel = new Label
                 {
@@ -422,13 +428,59 @@ namespace FunctionBox
                     Left = 20,
                     Top = 68,
                     Width = 300,
+                    Height = 15,
                     Style = ProgressBarStyle.Marquee,
                     MarqueeAnimationSpeed = 30
+                };
+
+                actionButton = new Button
+                {
+                    Left = 130,
+                    Top = 95,
+                    Width = 100,
+                    Height = 30,
+                    Text = "...",
+                    Enabled = false
+                };
+                actionButton.Click += (s, e) =>
+                {
+                    if (_isCloseAction)
+                    {
+                        this.Close();
+                    }
+                    else
+                    {
+                        _tcs?.TrySetResult(true);
+                    }
                 };
 
                 Controls.Add(statusLabel);
                 Controls.Add(versionLabel);
                 Controls.Add(progressBar);
+                Controls.Add(actionButton);
+
+                this.FormClosed += (s, e) =>
+                {
+                    _tcs?.TrySetResult(false);
+                };
+            }
+
+            public Task<bool> WaitForUserActionAsync()
+            {
+                _tcs = new TaskCompletionSource<bool>();
+                return _tcs.Task;
+            }
+
+            public void SetActionButtonState(bool enabled, string text, bool isClose = false)
+            {
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action<bool, string, bool>(SetActionButtonState), enabled, text, isClose);
+                    return;
+                }
+                actionButton.Enabled = enabled;
+                actionButton.Text = text;
+                _isCloseAction = isClose;
             }
 
             public void UpdateStatus(string message)

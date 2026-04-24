@@ -37,7 +37,8 @@ namespace FunctionBox
                     string codeName = addCodeForm.CodeNameTextBox.Text;
                     string code = addCodeForm.CodeEditTextBox.Text;
                     string remark = addCodeForm.RemarkTextBox.Text;
-                    string shortcut = addCodeForm.ShortcutTextBox.Text?.Trim();
+                    string shortcut = addCodeForm.ShortcutTextBox.Text;
+                    if (shortcut != null) shortcut = shortcut.Trim();
 
                     if (string.IsNullOrEmpty(codeName))
                     {
@@ -109,7 +110,8 @@ namespace FunctionBox
                         string codeName = addCodeForm.CodeNameTextBox.Text;
                         string code = addCodeForm.CodeEditTextBox.Text;
                         string remark = addCodeForm.RemarkTextBox.Text;
-                        string shortcut = addCodeForm.ShortcutTextBox.Text?.Trim();
+                        string shortcut = addCodeForm.ShortcutTextBox.Text;
+                        if (shortcut != null) shortcut = shortcut.Trim();
 
                         if (string.IsNullOrEmpty(codeName))
                         {
@@ -136,7 +138,8 @@ namespace FunctionBox
         }
         public static bool IsValidVbaCode(string code)
         {
-            if (!TryExtractMacroName(code, out _))
+            string dummy;
+            if (!TryExtractMacroName(code, out dummy))
             {
                 return false;
             }

@@ -1,4 +1,4 @@
-﻿namespace FunctionBox
+namespace FunctionBox
 {
     partial class FunctionBoxRibbon : Microsoft.Office.Tools.Ribbon.RibbonBase
     {
@@ -47,6 +47,7 @@
             this.btnAddThousand = this.Factory.CreateRibbonButton();
             this.btnBracketConvert = this.Factory.CreateRibbonButton();
             this.bthNegativeFormat = this.Factory.CreateRibbonButton();
+            this.bthReplaceTool = this.Factory.CreateRibbonButton();
             this.收纳箱 = this.Factory.CreateRibbonGroup();
             this.btnToolBox = this.Factory.CreateRibbonButton();
             this.btnToolList = this.Factory.CreateRibbonDropDown();
@@ -134,6 +135,7 @@
             this.文字处理.Items.Add(this.btnAddThousand);
             this.文字处理.Items.Add(this.btnBracketConvert);
             this.文字处理.Items.Add(this.bthNegativeFormat);
+            this.文字处理.Items.Add(this.bthReplaceTool);
             this.文字处理.Label = "文字处理";
             this.文字处理.Name = "文字处理";
             // 
@@ -158,6 +160,14 @@
             this.bthNegativeFormat.Name = "bthNegativeFormat";
             this.bthNegativeFormat.ScreenTip = "负号及括号互转";
             this.bthNegativeFormat.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.bthNegativeFormat_Click);
+            // 
+            // bthReplaceTool
+            // 
+            this.bthReplaceTool.Description = "文本数值批量替换";
+            this.bthReplaceTool.Label = "文本批量替换";
+            this.bthReplaceTool.Name = "bthReplaceTool";
+            this.bthReplaceTool.ScreenTip = "文本数值批量替换";
+            this.bthReplaceTool.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.bthReplaceTool_Click);
             // 
             // 收纳箱
             // 
@@ -254,6 +264,7 @@
         public Microsoft.Office.Tools.Ribbon.RibbonButton btnAddThousand;
         public Microsoft.Office.Tools.Ribbon.RibbonButton bthNegativeFormat;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup 文字处理;
+        public Microsoft.Office.Tools.Ribbon.RibbonButton bthReplaceTool;
     }
 
 
