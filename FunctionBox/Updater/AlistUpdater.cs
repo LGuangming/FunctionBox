@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -55,19 +55,30 @@ namespace FunctionBox
                     return;
                 }
 
-                statusForm.UpdateStatus($"发现新版本：{release.TagName}，是否更新？");
-                statusForm.SetIndeterminate(false);
-                statusForm.SetActionButtonState(true, "立即更新", isClose: false);
-
-                bool proceed = await statusForm.WaitForUserActionAsync();
-                if (!proceed)
+                statusForm.SafeHide();
+                DialogResult confirmResult = ShowTopMostMessage(
+                    $"发现新版本：{release.TagName}\n当前版本：{FormatVersion(localVersion)}\n\n是否现在下载并更新？",
+                    "更新提示",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+                if (confirmResult != DialogResult.Yes)
                 {
                     return;
                 }
 
+                statusForm.SetVersionText($"当前版本：{FormatVersion(localVersion)}    最新版本：{release.TagName}");
                 statusForm.UpdateStatus("正在下载更新包...");
+                statusForm.SetIndeterminate(false);
                 statusForm.SetActionButtonState(false, "下载中...");
                 statusForm.UpdateProgress(0, "准备下载...");
+                statusForm.SafeShow();
+                statusForm.SafeActivate();
+
+                bool proceed = true;
+                if (!proceed)
+                {
+                    return;
+                }
 
                 string setupPath = await DownloadAndPrepareInstallerAsync(release, statusForm);
 
@@ -401,7 +412,7 @@ namespace FunctionBox
                 MinimizeBox = false;
                 ShowInTaskbar = false;
                 TopMost = true;
-                ClientSize = new System.Drawing.Size(340, 140);
+                ClientSize = new System.Drawing.Size(340, 180);
 
                 statusLabel = new Label
                 {
@@ -409,15 +420,16 @@ namespace FunctionBox
                     Left = 20,
                     Top = 16,
                     Width = 300,
-                    Height = 22,
-                    Text = "准备中..."
+                    Height = 42,
+                    Text = "准备中...",
+                    TextAlign = System.Drawing.ContentAlignment.TopLeft
                 };
 
                 versionLabel = new Label
                 {
                     AutoSize = false,
                     Left = 20,
-                    Top = 40,
+                    Top = 60,
                     Width = 300,
                     Height = 20,
                     Text = "当前版本：未知"
@@ -426,7 +438,7 @@ namespace FunctionBox
                 progressBar = new ProgressBar
                 {
                     Left = 20,
-                    Top = 68,
+                    Top = 85,
                     Width = 300,
                     Height = 15,
                     Style = ProgressBarStyle.Marquee,
@@ -435,13 +447,16 @@ namespace FunctionBox
 
                 actionButton = new Button
                 {
-                    Left = 130,
-                    Top = 95,
                     Width = 100,
                     Height = 30,
                     Text = "...",
+                    FlatStyle = FlatStyle.System,
                     Enabled = false
                 };
+
+                // 动态计算位置以彻底解决缩放带来的偏移问题
+                this.Load += (s, e) => AdjustButtonPosition();
+                this.Resize += (s, e) => AdjustButtonPosition();
                 actionButton.Click += (s, e) =>
                 {
                     if (_isCloseAction)
@@ -463,6 +478,15 @@ namespace FunctionBox
                 {
                     _tcs?.TrySetResult(false);
                 };
+            }
+
+            private void AdjustButtonPosition()
+            {
+                if (actionButton == null) return;
+                // 绝对水平居中
+                actionButton.Left = (this.ClientSize.Width - actionButton.Width) / 2;
+                // 固定距离底部 15 像素
+                actionButton.Top = this.ClientSize.Height - actionButton.Height - 15;
             }
 
             public Task<bool> WaitForUserActionAsync()

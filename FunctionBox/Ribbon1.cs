@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Ribbon;
 using Microsoft.Vbe.Interop;
@@ -124,6 +124,11 @@ namespace FunctionBox
             }
             catch (Exception ex)
             {
+                if (Globals.ThisAddIn.HandleVbaTrustErrorSilently(ex))
+                {
+                    return;
+                }
+
                 MessageBox.Show($"执行VBA代码时出错: {ex.Message}");
             }
         }

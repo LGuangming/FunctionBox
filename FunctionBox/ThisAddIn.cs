@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -50,7 +50,7 @@ namespace FunctionBox
             SyncVbaShortcutBindings();
         }
 
-        private void EnableVbaTrustAutomatically()
+        public bool EnsureVbaTrustEnabled()
         {
             try
             {
@@ -66,6 +66,7 @@ namespace FunctionBox
                         {
                             key.SetValue("AccessVBOM", 1, Microsoft.Win32.RegistryValueKind.DWord);
                         }
+                        return true;
                     }
                     else
                     {
@@ -74,6 +75,7 @@ namespace FunctionBox
                             if (newKey != null)
                             {
                                 newKey.SetValue("AccessVBOM", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                                return true;
                             }
                         }
                     }
@@ -81,8 +83,25 @@ namespace FunctionBox
             }
             catch (Exception)
             {
-                // 静默失败，如果没有权限修改注册表则退回到常规的手动提示
+                // 静默失败
             }
+            return false;
+        }
+        private void EnableVbaTrustAutomatically()
+        {
+            EnsureVbaTrustEnabled();
+        }
+        public bool HandleVbaTrustErrorSilently(Exception ex)
+        {
+            if (!IsVbaTrustError(ex))
+            {
+                return false;
+            }
+
+            EnsureVbaTrustEnabled();
+            vbaTrustWarningShown = true;
+            SaveVbaTrustWarningState();
+            return true;
         }
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
@@ -260,36 +279,15 @@ namespace FunctionBox
             List<SelectedCellInfo> selectedCells = CollectSelectedCellsDirect(selection);
             AppendSumCheckDebug(debugLines, $"直接读取 Selection.Cells 得到 {selectedCells.Count} 个单元格");
 
-            bool needsFallback = selectedCells.Count < 2;
-            if (!needsFallback)
+            List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
+            if (fallbackCells.Count > 0)
             {
-                try
+                List<SelectedCellInfo> mergedCells = MergeSelectedCells(selectedCells, fallbackCells);
+                if (mergedCells.Count != selectedCells.Count ||
+                    !HaveSameSelectedCellCoordinates(selectedCells, mergedCells))
                 {
-                    if (selection.Range.Cells.Count > selectedCells.Count)
-                    {
-                        needsFallback = true;
-                        AppendSumCheckDebug(debugLines, $"检测到选区外框包围的单元格数({selection.Range.Cells.Count})大于 Selection.Cells，确认为非连续选区");
-                    }
-                }
-                catch
-                {
-                    needsFallback = true; // 如果报错说明表格复杂，稳妥起见执行反查
-                    AppendSumCheckDebug(debugLines, $"检测外框单元格时引发异常，降级执行反查");
-                }
-            }
-
-            if (needsFallback)
-            {
-                List<SelectedCellInfo> fallbackCells = CollectSelectedCellsByToggleMarker(selection, debugLines);
-                if (fallbackCells.Count > 0)
-                {
-                    List<SelectedCellInfo> mergedCells = MergeSelectedCells(selectedCells, fallbackCells);
-                    if (mergedCells.Count != selectedCells.Count ||
-                        !HaveSameSelectedCellCoordinates(selectedCells, mergedCells))
-                    {
-                        selectedCells = mergedCells;
-                        AppendSumCheckDebug(debugLines, $"已合并反查结果，共 {selectedCells.Count} 个单元格");
-                    }
+                    selectedCells = mergedCells;
+                    AppendSumCheckDebug(debugLines, $"已合并反查结果，共 {selectedCells.Count} 个单元格");
                 }
             }
 
@@ -402,26 +400,38 @@ namespace FunctionBox
         private List<SelectedCellInfo> CollectSelectedCellsByToggleMarker(Word.Selection selection, List<string> debugLines)
         {
             List<SelectedCellInfo> result = new List<SelectedCellInfo>();
-            if (selection == null || selection.Range == null || selection.Range.Tables.Count == 0) return result;
+            if (selection == null || selection.Range == null || selection.Range.Tables.Count == 0)
+            {
+                return result;
+            }
 
             Word.Table table = selection.Range.Tables[1];
-            // 使用一个极其罕见的字间距值作为标记
-            float markerKerning = 9.87f;
+            Dictionary<string, int> originalBoldValues = new Dictionary<string, int>();
 
             try
             {
-                // 1. 给选区打上标记（一次 COM 调用）
-                selection.Font.Kerning = markerKerning;
-
-                // 2. 遍历表格所有单元格，检查哪些被标记了
-                //    使用 table.Range.Cells 平铺集合，安全处理合并单元格
                 foreach (Word.Cell cell in table.Range.Cells)
                 {
                     try
                     {
-                        float k = cell.Range.Font.Kerning;
-                        // 浮点比较用容差
-                        if (Math.Abs(k - markerKerning) < 0.01f)
+                        originalBoldValues[GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex)] = cell.Range.Bold;
+                    }
+                    catch
+                    {
+                        // 跳过无法读取的合并残留格
+                    }
+                }
+
+                selection.Font.Bold = (int)Word.WdConstants.wdToggle;
+
+                foreach (Word.Cell cell in table.Range.Cells)
+                {
+                    try
+                    {
+                        string key = GetCellCoordinateKey(cell.RowIndex, cell.ColumnIndex);
+                        int originalBold;
+                        if (originalBoldValues.TryGetValue(key, out originalBold) &&
+                            cell.Range.Bold != originalBold)
                         {
                             result.Add(new SelectedCellInfo
                             {
@@ -431,7 +441,10 @@ namespace FunctionBox
                             });
                         }
                     }
-                    catch { /* 跳过无法读取的合并残留格 */ }
+                    catch
+                    {
+                        // 跳过无法读取的合并残留格
+                    }
                 }
             }
             catch (Exception ex)
@@ -440,8 +453,14 @@ namespace FunctionBox
             }
             finally
             {
-                // 3. 使用撤销完美恢复所有格式（不会破坏任何字体属性）
-                try { Application.ActiveDocument.Undo(); } catch { }
+                try
+                {
+                    Application.ActiveDocument.Undo();
+                }
+                catch
+                {
+                    // 撤销失败不阻断主流程
+                }
             }
 
             AppendSumCheckDebug(debugLines, $"非连续选区反查得到 {result.Count} 个单元格");
@@ -1121,25 +1140,7 @@ namespace FunctionBox
         }
         private bool HandleVbaTrustErrorOnce(Exception ex, string warningMessage)
         {
-            if (!IsVbaTrustError(ex))
-            {
-                return false;
-            }
-
-            if (!vbaTrustWarningShown)
-            {
-                string helpText = warningMessage + "\n\n" +
-                                  "要使这些功能生效，请在 Word 中手动开启权限：\n" +
-                                  "1. 点击左上角【文件】->【选项】\n" +
-                                  "2. 选择【信任中心】-> 点击【信任中心设置】\n" +
-                                  "3. 选择【宏设置】\n" +
-                                  "4. 勾选【信任对 VBA 项目对象模型的访问】并确定。";
-                MessageBox.Show(helpText, "需要开启 VBA 信任权限", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                vbaTrustWarningShown = true;
-                SaveVbaTrustWarningState();
-            }
-
-            return true;
+            return HandleVbaTrustErrorSilently(ex);
         }
 
         private static bool IsVbaTrustError(Exception ex)

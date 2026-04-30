@@ -1,4 +1,4 @@
-namespace FunctionBox
+﻿namespace FunctionBox
 {
     partial class FunctionBoxRibbon : Microsoft.Office.Tools.Ribbon.RibbonBase
     {
