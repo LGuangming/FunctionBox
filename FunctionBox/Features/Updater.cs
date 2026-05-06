@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
 
-namespace FunctionBox
+namespace FunctionBox.Features
 {
-    public static class AlistUpdater
+    public static class Updater
     {
         private const string LatestReleaseApiUrl = "https://api.github.com/repos/LGuangming/FunctionBox/releases/latest";
         private const string GitHubCdnPrefix = "https://gh.api.99988866.xyz/";

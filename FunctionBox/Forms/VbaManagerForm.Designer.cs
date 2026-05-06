@@ -1,4 +1,4 @@
-﻿using System.Windows.Forms;
+using System.Windows.Forms;
 
 namespace FunctionBox
 {
@@ -165,7 +165,9 @@ namespace FunctionBox
             this.lstVbaCodes.TabIndex = 5;
             this.lstVbaCodes.UseCompatibleStateImageBehavior = false;
             this.lstVbaCodes.View = System.Windows.Forms.View.Details;
+            this.lstVbaCodes.DoubleClick += new System.EventHandler(this.btnBoxEdit_Click);
             this.lstVbaCodes.ColumnWidthChanging += new System.Windows.Forms.ColumnWidthChangingEventHandler(this.lstVbaCodes_ColumnWidthChanging);
+            this.lstVbaCodes.SizeChanged += new System.EventHandler(this.lstVbaCodes_SizeChanged);
             // 
             // 代码名称
             // 

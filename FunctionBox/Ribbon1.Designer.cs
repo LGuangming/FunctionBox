@@ -48,6 +48,7 @@
             this.btnBracketConvert = this.Factory.CreateRibbonButton();
             this.bthNegativeFormat = this.Factory.CreateRibbonButton();
             this.bthReplaceTool = this.Factory.CreateRibbonButton();
+            this.btnDeciamlAlign = this.Factory.CreateRibbonButton();
             this.收纳箱 = this.Factory.CreateRibbonGroup();
             this.btnToolBox = this.Factory.CreateRibbonButton();
             this.btnToolList = this.Factory.CreateRibbonDropDown();
@@ -136,6 +137,7 @@
             this.文字处理.Items.Add(this.btnBracketConvert);
             this.文字处理.Items.Add(this.bthNegativeFormat);
             this.文字处理.Items.Add(this.bthReplaceTool);
+            this.文字处理.Items.Add(this.btnDeciamlAlign);
             this.文字处理.Label = "文字处理";
             this.文字处理.Name = "文字处理";
             // 
@@ -168,6 +170,14 @@
             this.bthReplaceTool.Name = "bthReplaceTool";
             this.bthReplaceTool.ScreenTip = "文本数值批量替换";
             this.bthReplaceTool.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.bthReplaceTool_Click);
+            // 
+            // btnDeciamlAlign
+            // 
+            this.btnDeciamlAlign.Description = "对齐小数点";
+            this.btnDeciamlAlign.Label = "小数点对齐";
+            this.btnDeciamlAlign.Name = "btnDeciamlAlign";
+            this.btnDeciamlAlign.ScreenTip = "对齐小数点";
+            this.btnDeciamlAlign.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeciamlAlign_Click);
             // 
             // 收纳箱
             // 
@@ -265,6 +275,7 @@
         public Microsoft.Office.Tools.Ribbon.RibbonButton bthNegativeFormat;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup 文字处理;
         public Microsoft.Office.Tools.Ribbon.RibbonButton bthReplaceTool;
+        public Microsoft.Office.Tools.Ribbon.RibbonButton btnDeciamlAlign;
     }
 
 

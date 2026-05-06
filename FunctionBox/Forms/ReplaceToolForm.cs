@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -119,9 +119,9 @@ namespace FunctionBox.Forms
             {
                 if (rule.EnabledCheckBox.Checked)
                 {
-                    // Word 中 ^p 代表换行，^t 代表制表符
-                    string oldText = rule.OldTextBox.Text.Replace("\\n", "^p").Replace("\\t", "^t").Replace("\\r", "^p");
-                    string newText = rule.NewTextBox.Text.Replace("\\n", "^p").Replace("\\t", "^t").Replace("\\r", "^p");
+                    // Word 中 ^p 代表段落标记(回车)，^t 代表制表符，^l 代表手动换行符(Shift+Enter)
+                    string oldText = rule.OldTextBox.Text.Replace("\\n", "^l").Replace("\\t", "^t").Replace("\\r", "^p").Replace("\\p", "^p");
+                    string newText = rule.NewTextBox.Text.Replace("\\n", "^l").Replace("\\t", "^t").Replace("\\r", "^p").Replace("\\p", "^p");
                     if (!string.IsNullOrEmpty(oldText))
                     {
                         rules.Add(new Tuple<string, string>(oldText, newText));

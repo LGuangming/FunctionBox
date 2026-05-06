@@ -1,4 +1,4 @@
-﻿<Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!--
     This section defines project-level properties.
@@ -223,7 +223,7 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="Updater\AlistUpdater.cs">
+    <Compile Include="Features\Updater.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Forms\addCodeForm.cs">
@@ -284,6 +284,13 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Features\DecimalAlignTool.cs" />
+    <Compile Include="Features\TextHelper.cs" />
+    <Compile Include="Features\ThousandSeparatorTool.cs" />
+    <Compile Include="Features\BracketConvertTool.cs" />
+    <Compile Include="Features\NegativeFormatTool.cs" />
+    <Compile Include="Features\BackgroundClearTool.cs" />
+    <Compile Include="Features\SumCheckTool.cs" />
     <Compile Include="Ribbon1.cs">
       <SubType>Component</SubType>
     </Compile>

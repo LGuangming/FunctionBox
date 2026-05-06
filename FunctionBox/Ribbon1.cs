@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Ribbon;
 using Microsoft.Vbe.Interop;
+
 namespace FunctionBox
 {
     public partial class FunctionBoxRibbon
@@ -54,6 +55,10 @@ namespace FunctionBox
         {
             Forms.ReplaceToolForm replaceToolForm = new Forms.ReplaceToolForm();
             replaceToolForm.Show();
+        }
+        private void btnDeciamlAlign_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.DecimalAlign();
         }
         private void btnToolBox_Click(object sender, RibbonControlEventArgs e)
         {
@@ -140,7 +145,7 @@ namespace FunctionBox
 
         private async void btnUpdate_Click(object sender, RibbonControlEventArgs e)
         {
-            await FunctionBox.AlistUpdater.CheckAndUpdateAsync();
+            await FunctionBox.Features.Updater.CheckAndUpdateAsync();
         }
         private void btnCheckSumDebug_Click(object sender, RibbonControlEventArgs e)
         {
@@ -149,4 +154,3 @@ namespace FunctionBox
 
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -321,6 +321,7 @@ namespace FunctionBox
         private void VbaManagerForm_Load(object sender, EventArgs e)
         {
             LoadVbaCodes(null, btnToolList);
+            lstVbaCodes_SizeChanged(null, null); // 初始化列宽比例
         }
         private void VbaManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -442,10 +443,116 @@ namespace FunctionBox
             }
             lstVbaCodes.EndUpdate();
         }
+
+        private bool isAdjustingColumn = false;
+
+        private void lstVbaCodes_SizeChanged(object sender, EventArgs e)
+        {
+            if (isAdjustingColumn || lstVbaCodes.Columns.Count < 3) return;
+
+            isAdjustingColumn = true;
+            try
+            {
+                int totalWidth = lstVbaCodes.ClientSize.Width;
+                int col3Width = lstVbaCodes.Columns[2].Width;
+                
+                int remainingWidth = totalWidth - col3Width;
+                if (remainingWidth > 0)
+                {
+                    // 保持第一列不变，让第二列吸收所有窗口缩放的变化
+                    int newCol2Width = remainingWidth - lstVbaCodes.Columns[0].Width;
+                    if (newCol2Width < 50)
+                    {
+                        // 如果第二列太小，则压缩第一列
+                        lstVbaCodes.Columns[1].Width = 50;
+                        lstVbaCodes.Columns[0].Width = remainingWidth - 50;
+                    }
+                    else
+                    {
+                        lstVbaCodes.Columns[1].Width = newCol2Width;
+                    }
+                }
+            }
+            finally
+            {
+                isAdjustingColumn = false;
+            }
+        }
+
         private void lstVbaCodes_ColumnWidthChanging(object sender, ColumnWidthChangingEventArgs e)
         {
-            e.Cancel = true; // 取消列宽更改
-            e.NewWidth = this.lstVbaCodes.Columns[e.ColumnIndex].Width; // 保持原来的宽度
+            if (isAdjustingColumn) return;
+
+            // 锁定第三列的最右侧边界，禁止直接往外或往里拉出空白
+            if (e.ColumnIndex == 2)
+            {
+                e.Cancel = true;
+                e.NewWidth = lstVbaCodes.Columns[2].Width;
+                return;
+            }
+
+            // 允许调整第二列（左侧边界），并让第三列反向补偿宽度
+            if (e.ColumnIndex == 1)
+            {
+                int totalWidth = lstVbaCodes.ClientSize.Width;
+                int col1Width = lstVbaCodes.Columns[0].Width;
+                int remainingWidth = totalWidth - col1Width;
+
+                int newCol2Width = e.NewWidth;
+
+                // 限制第二列不能无限变大（留给第三列最小 50 的空间）
+                if (newCol2Width > remainingWidth - 50)
+                {
+                    newCol2Width = remainingWidth - 50;
+                    e.Cancel = true;
+                    e.NewWidth = newCol2Width;
+                }
+
+                // 限制第二列不能太小
+                if (newCol2Width < 50)
+                {
+                    newCol2Width = 50;
+                    e.Cancel = true;
+                    e.NewWidth = newCol2Width;
+                }
+
+                // 同步反向调整第三列
+                isAdjustingColumn = true;
+                lstVbaCodes.Columns[2].Width = remainingWidth - newCol2Width;
+                isAdjustingColumn = false;
+                return;
+            }
+
+            // 允许调整第一列，并让第二列反向补偿宽度
+            if (e.ColumnIndex == 0)
+            {
+                int totalWidth = lstVbaCodes.ClientSize.Width;
+                int col3Width = lstVbaCodes.Columns[2].Width;
+                int remainingWidth = totalWidth - col3Width;
+
+                int newCol1Width = e.NewWidth;
+
+                // 限制第一列不能无限变大（留给第二列最小 50 的空间）
+                if (newCol1Width > remainingWidth - 50)
+                {
+                    newCol1Width = remainingWidth - 50;
+                    e.Cancel = true;
+                    e.NewWidth = newCol1Width;
+                }
+
+                // 限制第一列不能太小
+                if (newCol1Width < 50)
+                {
+                    newCol1Width = 50;
+                    e.Cancel = true;
+                    e.NewWidth = newCol1Width;
+                }
+
+                // 同步反向调整第二列
+                isAdjustingColumn = true;
+                lstVbaCodes.Columns[1].Width = remainingWidth - newCol1Width;
+                isAdjustingColumn = false;
+            }
         }
 
     }
