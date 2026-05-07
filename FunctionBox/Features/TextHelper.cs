@@ -21,6 +21,10 @@ namespace FunctionBox.Features
             wordApp.UndoRecord.StartCustomRecord(undoName);
             wordApp.ScreenUpdating = false;
 
+            // 临时关闭修订追踪，避免 Find/Replace 在 Track Changes 下异常
+            bool wasTrackingRevisions = doc.TrackRevisions;
+            doc.TrackRevisions = false;
+
             try
             {
                 if (selection.Type == Word.WdSelectionType.wdSelectionIP)
@@ -49,6 +53,7 @@ namespace FunctionBox.Features
             }
             finally
             {
+                doc.TrackRevisions = wasTrackingRevisions;
                 wordApp.ScreenUpdating = true;
                 wordApp.UndoRecord.EndCustomRecord();
             }

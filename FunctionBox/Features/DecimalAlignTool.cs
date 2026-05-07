@@ -261,11 +261,9 @@ namespace FunctionBox.Features
                         }
 
                         // 第二轮：通过 Cell RightPadding 施加对齐
-                        // 优先减少负数的边距（最小到0），不够再增加正数的边距
-                        float P = representativePadding; // 当前统一右边距
-                        float B = bracketWidth;          // 括号宽度
-                        float negNewPadding = Math.Max(0f, P - B);
-                        float posNewPadding = P + Math.Max(0f, B - P);
+                        // 负数永远设为0（最大化空间），正数设为括号宽度
+                        float negNewPadding = 0f;
+                        float posNewPadding = bracketWidth;
 
                         foreach (CellAlignInfo info in cellInfos)
                         {
@@ -319,75 +317,20 @@ namespace FunctionBox.Features
 
             float bracketWidth = MeasureTextWidth(")", fontName, fontSize);
 
-            // 在同列中查找一个参考单元格（正数或负数，与当前单元格相反的类型）
-            Word.Table tbl = selectedCell.Range.Tables[1];
-            int colIndex = selectedCell.ColumnIndex;
-            float referencePadding = 0f;
-            bool foundReference = false;
 
-            for (int r = 1; r <= tbl.Rows.Count; r++)
-            {
-                Word.Cell refCell = null;
-                try { refCell = tbl.Cell(r, colIndex); }
-                catch { continue; }
-                if (refCell == null) continue;
 
-                // 跳过自身
-                if (refCell.RowIndex == selectedCell.RowIndex) continue;
-
-                Word.Range refRng = refCell.Range;
-                refRng.End = refRng.End - 1;
-                string refText = CleanCellText(refRng.Text);
-
-                bool refIsNumber = fullNumberRegex.IsMatch(refText);
-                if (!refIsNumber && treatDashAsZero && refText == "-")
-                    refIsNumber = true;
-                if (!refIsNumber) continue;
-
-                bool refIsBracket = refText.StartsWith("(") && refText.EndsWith(")");
-
-                // 找到类型不同的参考单元格（选中负数则找正数，选中正数则找负数）
-                if (refIsBracket != isBracket)
-                {
-                    try { referencePadding = refCell.RightPadding; }
-                    catch { }
-                    if (referencePadding < 0) referencePadding = 0;
-                    foundReference = true;
-                    break;
-                }
-            }
-
-            // 通过 Cell RightPadding 应用对齐
+            // 通过 Cell RightPadding 应用对齐：负数永远0，正数永远括号宽度
             Word.ParagraphFormat pf = selectedCell.Range.ParagraphFormat;
             pf.Alignment = Word.WdParagraphAlignment.wdAlignParagraphRight;
-            pf.RightIndent = 0f; // 清除段落右缩进
+            pf.RightIndent = 0f;
 
-            if (foundReference)
+            if (isBracket)
             {
-                if (isBracket)
-                {
-                    // 选中的是负数：参考正数的右边距，减去括号宽度
-                    selectedCell.RightPadding = Math.Max(0f, referencePadding - bracketWidth);
-                }
-                else
-                {
-                    // 选中的是正数：参考负数的右边距，加上括号宽度
-                    selectedCell.RightPadding = referencePadding + bracketWidth;
-                }
+                selectedCell.RightPadding = 0f;
             }
             else
             {
-                // 同列没有找到对比参考，按默认逻辑处理
-                float currentPadding = 0f;
-                try { currentPadding = selectedCell.RightPadding; } catch { }
-                if (isBracket)
-                {
-                    selectedCell.RightPadding = Math.Max(0f, currentPadding - bracketWidth);
-                }
-                else
-                {
-                    selectedCell.RightPadding = currentPadding + bracketWidth;
-                }
+                selectedCell.RightPadding = bracketWidth;
             }
         }
 

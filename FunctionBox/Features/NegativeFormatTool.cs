@@ -9,7 +9,7 @@ namespace FunctionBox.Features
     public static class NegativeFormatTool
     {
         private static readonly Regex NegativeRegex = new Regex(
-            @"(-[0-9][0-9,]*(?:\.\d+)?|\([0-9][0-9,]*(?:\.\d+)?\)|（[0-9][0-9,]*(?:\.\d+)?）)",
+            @"((?<![0-9a-zA-Z])-[0-9][0-9,]*(?:\.\d+)?|\([0-9][0-9,]*(?:\.\d+)?\)|（[0-9][0-9,]*(?:\.\d+)?）)",
             RegexOptions.Compiled);
 
         public static void Execute(Word.Application app)
@@ -73,6 +73,14 @@ namespace FunctionBox.Features
                 {
                     if (!searchRange.InRange(range)) break;
 
+                    // 跳过序号格式的括号数字，如 "(1) 文本内容"
+                    // 判断条件：括号数字后面紧跟空格、字母或中文字符
+                    if (!toBrackets && IsSequenceNumber(searchRange))
+                    {
+                        searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                        continue;
+                    }
+
                     if (toBrackets)
                     {
                         string originalFont = searchRange.Font.Name;
@@ -110,6 +118,66 @@ namespace FunctionBox.Features
                     searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
                 }
             }
+        }
+        /// <summary>
+        /// 判断括号数字是否是序号（如 "(1) 文本" 或段落开头的 "(1)"）。
+        /// 判断条件：不含小数点和千分位的纯整数括号，且后面紧跟空格、字母或中文字符。
+        /// </summary>
+        private static bool IsSequenceNumber(Word.Range bracketRange)
+        {
+            try
+            {
+                string text = bracketRange.Text;
+                if (string.IsNullOrEmpty(text)) return false;
+
+                // 只检查括号格式 (数字) 或 （数字）
+                if (!(text.StartsWith("(") || text.StartsWith("（"))) return false;
+
+                // 如果包含小数点或千分位逗号，肯定是数字不是序号
+                if (text.Contains(".") || text.Contains(",")) return false;
+
+                // 检查后面的字符
+                Word.Document doc = bracketRange.Document;
+                if (bracketRange.End < doc.Content.End)
+                {
+                    Word.Range nextRange = doc.Range(bracketRange.End, Math.Min(bracketRange.End + 1, doc.Content.End));
+                    string nextChar = nextRange.Text;
+                    if (!string.IsNullOrEmpty(nextChar))
+                    {
+                        char c = nextChar[0];
+                        // 后面是空格、字母、中文字符 → 序号
+                        if (c == ' ' || c == '\t' || c == '.' ||
+                            (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                            c > 255) // 中文等非ASCII字符
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                // 检查前面的字符：如果在段落/行首，也可能是序号
+                if (bracketRange.Start > doc.Content.Start)
+                {
+                    Word.Range prevRange = doc.Range(bracketRange.Start - 1, bracketRange.Start);
+                    string prevChar = prevRange.Text;
+                    if (!string.IsNullOrEmpty(prevChar))
+                    {
+                        char c = prevChar[0];
+                        // 前面是换行/段落标记 → 段落开头的序号
+                        if (c == '\r' || c == '\n' || c == '\a')
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    // 在文档最开头 → 序号
+                    return true;
+                }
+            }
+            catch { }
+            return false;
         }
     }
 }

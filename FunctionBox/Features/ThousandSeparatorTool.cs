@@ -11,66 +11,81 @@ namespace FunctionBox.Features
         {
             TextHelper.ApplyTextProcessing(app, "添加千分符", range =>
             {
-                string content = range.Text;
-                if (string.IsNullOrEmpty(content)) return;
-
-                MatchCollection matches = TextHelper.IndependentNumberRegex.Matches(content);
-                HashSet<string> processed = new HashSet<string>();
-
-                for (int index = 0; index < matches.Count; index++)
+                // 按段落逐个处理，避免表格标记符干扰正则匹配和 Word Find
+                foreach (Word.Paragraph para in range.Paragraphs)
                 {
-                    Match match = matches[index];
-                    if (!ShouldFormatNumberString(match.Value))
+                    try
                     {
-                        continue;
+                        Word.Range paraRange = para.Range;
+                        ProcessParagraph(paraRange);
                     }
+                    catch { }
+                }
+            });
+        }
 
-                    if (!TryFormatIndependentNumber(match.Value, out string formattedText))
+        private static void ProcessParagraph(Word.Range range)
+        {
+            string content = "";
+            try { content = range.Text; } catch { return; }
+            if (string.IsNullOrEmpty(content)) return;
+
+            MatchCollection matches = TextHelper.IndependentNumberRegex.Matches(content);
+            HashSet<string> processed = new HashSet<string>();
+
+            for (int index = 0; index < matches.Count; index++)
+            {
+                Match match = matches[index];
+                if (!ShouldFormatNumberString(match.Value))
+                {
+                    continue;
+                }
+
+                if (!TryFormatIndependentNumber(match.Value, out string formattedText))
+                {
+                    continue;
+                }
+
+                if (string.Equals(match.Value, formattedText, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (processed.Contains(match.Value))
+                {
+                    continue;
+                }
+                processed.Add(match.Value);
+
+                Word.Range searchRange = range.Duplicate;
+                Word.Find find = searchRange.Find;
+                find.ClearFormatting();
+                find.Text = match.Value;
+                find.MatchWildcards = false;
+                find.MatchWholeWord = false;
+                find.Wrap = Word.WdFindWrap.wdFindStop;
+
+                while (find.Execute())
+                {
+                    if (searchRange.InRange(range))
                     {
-                        continue;
-                    }
-
-                    if (string.Equals(match.Value, formattedText, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    if (processed.Contains(match.Value))
-                    {
-                        continue;
-                    }
-                    processed.Add(match.Value);
-
-                    Word.Range searchRange = range.Duplicate;
-                    Word.Find find = searchRange.Find;
-                    find.ClearFormatting();
-                    find.Text = match.Value;
-                    find.MatchWildcards = false;
-                    find.MatchWholeWord = false;
-                    find.Wrap = Word.WdFindWrap.wdFindStop;
-
-                    while (find.Execute())
-                    {
-                        if (searchRange.InRange(range))
+                        if (ShouldFormatRange(searchRange))
                         {
-                            if (ShouldFormatRange(searchRange))
+                            string originalAsciiFont = searchRange.Font.NameAscii;
+                            searchRange.Text = formattedText;
+                            if (!string.IsNullOrWhiteSpace(originalAsciiFont))
                             {
-                                string originalAsciiFont = searchRange.Font.NameAscii;
-                                searchRange.Text = formattedText;
-                                if (!string.IsNullOrWhiteSpace(originalAsciiFont))
-                                {
-                                    searchRange.Font.NameAscii = originalAsciiFont;
-                                }
-                                searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                                searchRange.Font.NameAscii = originalAsciiFont;
                             }
-                            else
-                            {
-                                searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
-                            }
+                            searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+                        }
+                        else
+                        {
+                            searchRange.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
                         }
                     }
                 }
-            });
+            }
         }
 
         private static bool ShouldFormatNumberString(string matchValue)
